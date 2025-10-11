@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import './Login.css';
+import { api } from '../utils/api';
 
 interface LoginProps {
-  onLogin: (username: string, role: 'admin' | 'physician') => void;
+  onLogin: (user: { username: string; role: 'admin' | 'physician'; providerId?: string | null }) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -10,15 +11,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // For demo: hardcoded users
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin123') {
-      onLogin(username, 'admin');
-    } else if (username === 'physician' && password === 'physician123') {
-      onLogin(username, 'physician');
-    } else {
-      setError('Invalid username or password');
+    try {
+      const user = await api.login(username, password);
+      onLogin(user);
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
     }
   };
 

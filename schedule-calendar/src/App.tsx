@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import UserManagement, { UserAccount } from './components/UserManagement';
 import './components/UserManagement.css';
@@ -15,7 +14,7 @@ import './App.css';
 
 function getInitialAuth() {
   // For demo: not logged in
-  return { isAuthenticated: false, username: '', role: undefined };
+  return { isAuthenticated: false, username: '', role: undefined, providerId: undefined as string | undefined };
 }
 
 export type UserRole = 'admin' | 'physician';
@@ -31,7 +30,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean; username: string; role?: UserRole }>(getInitialAuth());
+  const [auth, setAuth] = useState<{ isAuthenticated: boolean; username: string; role?: UserRole; providerId?: string | null }>(getInitialAuth());
 
   // Demo: user accounts state (in-memory only)
   const [users, setUsers] = useState<UserAccount[]>([
@@ -76,14 +75,41 @@ function App() {
     setSelectedDate(undefined);
   };
 
-  const handleLogin = (username: string, role: UserRole) => {
-    setAuth({ isAuthenticated: true, username, role });
+  const handleLogin = async (user: { username: string; role: UserRole; providerId?: string | null }) => {
+    setAuth({ isAuthenticated: true, username: user.username, role: user.role, providerId: user.providerId });
+    await loadScheduleData();
   };
   const handleLogout = () => {
-    setAuth({ isAuthenticated: false, username: '', role: undefined });
-    setScheduleData({ providers: [], sites: [], schedules: [] });
+    setAuth({ isAuthenticated: false, username: '', role: undefined, providerId: undefined });
+    // Do NOT clear scheduleData here; keep it loaded for next login
   };
 
+  // Loads schedule data from backend
+  const loadScheduleData = async () => {
+    try {
+      const { api } = await import('./utils/api');
+      const [providers, sites, schedules] = await Promise.all([
+        api.getProviders(),
+        api.getSites(),
+        api.getSchedules()
+      ]);
+      // Convert API data back to frontend format
+      const convertedSchedules = schedules.map(s => ({
+        id: s.id,
+        providerId: s.providerId,
+        siteId: s.siteId,
+        date: new Date(s.date + 'T00:00:00'),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        status: s.status as 'scheduled' | 'confirmed' | 'cancelled',
+        notes: s.notes || ''
+      }));
+      setScheduleData({ providers, sites, schedules: convertedSchedules });
+    } catch (err) {
+      setError('Failed to load schedule data from backend.');
+      console.error('Error loading schedule data:', err);
+    }
+  };
 
   if (!auth.isAuthenticated) {
     return <Login onLogin={handleLogin} />;
@@ -91,7 +117,14 @@ function App() {
 
   if (auth.role === 'physician') {
     // Find provider object for logged-in physician
-    const provider = scheduleData.providers.find(p => p.name.toLowerCase() === auth.username.toLowerCase());
+    let provider: Provider | undefined = undefined;
+    if (auth.providerId) {
+      provider = scheduleData.providers.find(p => p.id === auth.providerId);
+    }
+    // Fallback to username matching if providerId isn't set or not found
+    if (!provider) {
+      provider = scheduleData.providers.find(p => p.name.toLowerCase() === auth.username.toLowerCase());
+    }
     if (!provider) {
       return (
         <div className="unauthorized">
@@ -101,7 +134,17 @@ function App() {
         </div>
       );
     }
-    return <PhysicianView provider={provider} scheduleData={scheduleData} onLogout={handleLogout} />;
+    return (
+      <>
+        <div style={{ background: '#f8f8e0', border: '1px solid #ccc', padding: 10, margin: '10px 0', borderRadius: 6, fontSize: 14 }}>
+          <b>My Account Debug:</b><br />
+          Username: <code>{auth.username}</code><br />
+          ProviderId: <code>{auth.providerId || 'Not set'}</code><br />
+          Matched Provider: <code>{provider ? provider.name + ' (' + provider.id + ')' : 'None'}</code>
+        </div>
+        <PhysicianView provider={provider} scheduleData={scheduleData} onLogout={handleLogout} />
+      </>
+    );
   }
 
   if (auth.role !== 'admin') {
