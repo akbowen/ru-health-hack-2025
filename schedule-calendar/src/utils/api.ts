@@ -68,4 +68,6 @@ export const api = {
     request('/api/sites/bulk', { method: 'POST', body: JSON.stringify(rows) }),
   bulkSchedules: async (rows: Array<{ id: string; providerId: string; siteId: string; date: string; startTime: string; endTime: string; status: string; notes?: string }>) =>
     request('/api/schedules/bulk', { method: 'POST', body: JSON.stringify(rows) }),
+  resetSchedule: async (): Promise<{ ok: true }> =>
+    request('/api/schedule/reset', { method: 'POST' }),
 };

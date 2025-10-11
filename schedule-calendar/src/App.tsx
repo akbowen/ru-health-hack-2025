@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UserManagement, { UserAccount } from './components/UserManagement';
 import './components/UserManagement.css';
 import PhysicianView from './components/PhysicianView';
@@ -32,20 +32,49 @@ function App() {
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
   const [auth, setAuth] = useState<{ isAuthenticated: boolean; username: string; role?: UserRole; providerId?: string | null }>(getInitialAuth());
 
-  // Demo: user accounts state (in-memory only)
-  const [users, setUsers] = useState<UserAccount[]>([
-    { username: 'admin', password: 'admin123', role: 'admin' },
-    { username: 'physician', password: 'physician123', role: 'physician' },
-  ]);
+  // User accounts state (loaded from database)
+  const [users, setUsers] = useState<UserAccount[]>([]);
 
-  const handleAddUser = (user: UserAccount) => {
-    setUsers(prev => [...prev, user]);
+  const handleAddUser = async (user: UserAccount) => {
+    try {
+      const { api } = await import('./utils/api');
+      await api.createUser({
+        username: user.username,
+        password: user.password,
+        role: user.role,
+        providerId: user.providerId
+      });
+      setUsers(prev => [...prev, user]);
+      setSuccessMessage('User created successfully');
+    } catch (error: any) {
+      setError(`Failed to create user: ${error.message}`);
+    }
   };
-  const handleEditUser = (user: UserAccount) => {
-    setUsers(prev => prev.map(u => u.username === user.username ? user : u));
+
+  const handleEditUser = async (user: UserAccount) => {
+    try {
+      const { api } = await import('./utils/api');
+      await api.updateUser(user.username, {
+        password: user.password,
+        role: user.role,
+        providerId: user.providerId
+      });
+      setUsers(prev => prev.map(u => u.username === user.username ? user : u));
+      setSuccessMessage('User updated successfully');
+    } catch (error: any) {
+      setError(`Failed to update user: ${error.message}`);
+    }
   };
-  const handleDeleteUser = (username: string) => {
-    setUsers(prev => prev.filter(u => u.username !== username));
+
+  const handleDeleteUser = async (username: string) => {
+    try {
+      const { api } = await import('./utils/api');
+      await api.deleteUser(username);
+      setUsers(prev => prev.filter(u => u.username !== username));
+      setSuccessMessage('User deleted successfully');
+    } catch (error: any) {
+      setError(`Failed to delete user: ${error.message}`);
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -53,12 +82,15 @@ function App() {
     setError(undefined);
     setSuccessMessage(undefined);
     try {
-      const data = await parseScheduleExcel(file);
-      setScheduleData(data);
+  const data = await parseScheduleExcel(file);
+  // Persist to backend so DB is the source of truth
+  await saveScheduleDataToBackend(data);
+  // Reload from backend to ensure we're showing what's actually stored
+  await loadScheduleData();
       // Reset filters when new data is loaded
       setSelectedProvider(undefined);
       setSelectedSite(undefined);
-      setSuccessMessage(`Successfully loaded ${data.providers.length} providers and ${data.sites.length} sites with ${data.schedules.length} schedule entries!`);
+  setSuccessMessage(`Imported ${data.providers.length} providers, ${data.sites.length} sites, and ${data.schedules.length} schedule entries. Reloaded from database.`);
     } catch (err) {
       setError('Failed to parse Excel file. Please check the file format and ensure it matches the expected structure.');
       console.error('Error parsing file:', err);
@@ -110,6 +142,66 @@ function App() {
       console.error('Error loading schedule data:', err);
     }
   };
+
+  // Saves parsed schedule data to backend in bulk
+  const saveScheduleDataToBackend = async (data: ScheduleData) => {
+    const { api } = await import('./utils/api');
+    // Reset DB state so it's a clean import (users unaffected)
+    await api.resetSchedule();
+    // Upsert providers and sites
+    await api.bulkProviders(data.providers.map(p => ({ id: p.id, name: p.name })));
+    await api.bulkSites(data.sites.map(s => ({ id: s.id, name: s.name })));
+    // Upsert schedules (dates as YYYY-MM-DD)
+    await api.bulkSchedules(
+      data.schedules.map(s => ({
+        id: s.id,
+        providerId: s.providerId,
+        siteId: s.siteId,
+        date: (s.date instanceof Date ? s.date : new Date(s.date)).toISOString().slice(0, 10),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        status: s.status,
+        notes: s.notes || ''
+      }))
+    );
+  };
+
+  // Loads users from backend
+  const loadUsers = async () => {
+    try {
+      const { api } = await import('./utils/api');
+      const apiUsers = await api.getUsers();
+      // Convert API users to UserAccount format (password is not returned by API for security)
+      const convertedUsers = apiUsers.map(u => ({
+        username: u.username,
+        password: '', // Password not returned by API
+        role: u.role,
+        providerId: u.providerId || undefined
+      }));
+      setUsers(convertedUsers);
+    } catch (err) {
+      setError('Failed to load users from backend.');
+      console.error('Error loading users:', err);
+    }
+  };
+
+  // Load users when component mounts (for admin)
+    useEffect(() => {
+    if (auth.isAuthenticated && auth.role === 'admin') {
+      loadUsers();
+    }
+  }, [auth.isAuthenticated, auth.role]);
+
+  // Periodically refresh schedules from DB while authenticated
+  useEffect(() => {
+    if (!auth.isAuthenticated) return;
+    // Initial load to ensure fresh data after login
+    loadScheduleData();
+    const id = setInterval(() => {
+      loadScheduleData();
+    }, 30000); // every 30s
+    return () => clearInterval(id);
+  }, [auth.isAuthenticated]);
 
   if (!auth.isAuthenticated) {
     return <Login onLogin={handleLogin} />;
@@ -191,6 +283,9 @@ function App() {
           />
         ) : (
           <>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <button onClick={loadScheduleData}>Reload from database</button>
+            </div>
             {error && (
               <div className="error-message">
                 {error}

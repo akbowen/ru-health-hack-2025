@@ -13,7 +13,7 @@ const StatsSummary: React.FC<StatsSummaryProps> = ({
   selectedProvider,
   selectedSite
 }) => {
-  const { providers, sites, schedules } = scheduleData;
+  const { schedules } = scheduleData;
   
   // Filter schedules based on current filters
   const filteredSchedules = schedules.filter(schedule => {
@@ -26,10 +26,12 @@ const StatsSummary: React.FC<StatsSummaryProps> = ({
     return true;
   });
   
-  // Calculate stats
-  const totalProviders = providers.length;
-  const totalSites = sites.length;
+  // Calculate stats based on filtered schedules only
   const totalSchedules = filteredSchedules.length;
+  const uniqueProviderIds = new Set(filteredSchedules.map(s => s.providerId));
+  const uniqueSiteIds = new Set(filteredSchedules.map(s => s.siteId));
+  const totalProviders = uniqueProviderIds.size;
+  const totalSites = uniqueSiteIds.size;
   
   // Get date range
   const dates = filteredSchedules.map(s => s.date.getTime());

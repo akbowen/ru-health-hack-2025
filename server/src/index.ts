@@ -161,6 +161,19 @@ app.get('/api/schedules', async (req: Request, res: Response) => {
   }
 });
 
+// Reset schedules, providers, and sites (does not affect users)
+app.post('/api/schedule/reset', async (_req: Request, res: Response) => {
+  try {
+    // Clear in child->parent order to avoid FK issues
+    await dbRun('DELETE FROM schedules');
+    await dbRun('DELETE FROM providers');
+    await dbRun('DELETE FROM sites');
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);

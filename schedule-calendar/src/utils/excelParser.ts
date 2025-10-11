@@ -1,32 +1,171 @@
 import * as XLSX from 'xlsx';
 import { ScheduleData, Provider, Site, ScheduleEntry } from '../types/schedule';
+import { stableProviderId, stableSiteId, stableScheduleId } from './id';
 
 export const parseExcelFile = async (file: File): Promise<ScheduleData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
-        
-        // Assuming the first sheet contains the schedule data
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
+
+        // Try default JSON parse first
+        let jsonData = XLSX.utils.sheet_to_json(sheet);
         
-        // Convert sheet to JSON
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        // Check if this is the new format by looking at column headers
+        const isNewFormat = jsonData.length > 0 && jsonData[0] && 
+          Object.keys(jsonData[0]).some(key => key.includes(' - '));
         
-        const scheduleData = parseScheduleData(jsonData);
-        resolve(scheduleData);
+        if (jsonData.length > 0 && !isNewFormat) {
+          // Old format - has columns like "Provider", "Site", etc.
+          const scheduleData = parseScheduleData(jsonData);
+          resolve(scheduleData);
+          return;
+        }
+
+        // New format - use header: 1 (array of arrays) for better parsing
+        const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+        if (rawData.length > 0) {
+          const scheduleData = parseComplexScheduleData(rawData);
+          resolve(scheduleData);
+          return;
+        }
+
+        reject(new Error('Unrecognized Excel format'));
       } catch (error) {
         reject(error);
       }
     };
-    
+
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsBinaryString(file);
   });
+};
+
+// --- New format parser (handles site-shift column format) ---
+const parseComplexScheduleData = (rawData: any[][]): ScheduleData => {
+  const providers: Provider[] = [];
+  const sites: Site[] = [];
+  const schedules: ScheduleEntry[] = [];
+
+  const providerMap = new Map<string, Provider>();
+  const siteMap = new Map<string, Site>();
+
+  if (rawData.length < 2) {
+    throw new Error('Invalid schedule format - need at least 2 rows');
+  }
+
+  // Row 0 contains headers like "AHG - MD1", "AHG - MD2", "AHG - PM", etc.
+  const headers = rawData[0];
+  
+  // Parse headers to extract site-shift combinations
+  const siteShiftColumns: Array<{ site: string; shift: string; columnIndex: number }> = [];
+  
+  for (let colIndex = 1; colIndex < headers.length; colIndex++) {
+    const header = headers[colIndex];
+    if (header && typeof header === 'string') {
+      const parts = header.split(' - ');
+      if (parts.length >= 2) {
+        const siteName = parts[0].trim();
+        const shift = parts[1].trim();
+        
+        siteShiftColumns.push({
+          site: siteName,
+          shift: shift,
+          columnIndex: colIndex
+        });
+
+        // Create site if not exists
+        if (!siteMap.has(siteName)) {
+          const siteId = stableSiteId(siteName);
+          const site: Site = {
+            id: siteId,
+            name: siteName,
+            type: getProviderTypeFromCode(shift)
+          };
+          sites.push(site);
+          siteMap.set(siteName, site);
+        }
+      }
+    }
+  }
+
+  // Parse data rows (starting from row 1)
+  for (let rowIndex = 1; rowIndex < rawData.length; rowIndex++) {
+    const row = rawData[rowIndex];
+    if (!row || row.length < 2) continue;
+    
+    const dayNumber = row[0];
+    if (typeof dayNumber !== 'number') continue;
+    
+    // Use the day number for October 2025
+    const scheduleDate = new Date(2025, 9, dayNumber);
+    
+    // Process each site-shift column
+    for (const siteShift of siteShiftColumns) {
+      const providerName = row[siteShift.columnIndex];
+      
+      // Skip if empty, "UNCOVERED", or not a string
+      if (!providerName || typeof providerName !== 'string' || providerName === 'UNCOVERED') {
+        continue;
+      }
+      
+      // Clean provider name
+      const cleanProviderName = providerName.trim();
+      if (!cleanProviderName) continue;
+
+      // Create or get provider
+      if (!providerMap.has(cleanProviderName)) {
+        const providerId = stableProviderId(cleanProviderName);
+        const provider: Provider = {
+          id: providerId,
+          name: cleanProviderName,
+          specialty: getSpecialtyFromName(cleanProviderName)
+        };
+        providers.push(provider);
+        providerMap.set(cleanProviderName, provider);
+      }
+
+      const provider = providerMap.get(cleanProviderName)!;
+      const site = siteMap.get(siteShift.site)!;
+
+      // Create schedule entry
+      const schedule: ScheduleEntry = {
+        id: stableScheduleId(provider.id, site.id, new Date(scheduleDate), siteShift.shift),
+        providerId: provider.id,
+        siteId: site.id,
+        date: new Date(scheduleDate),
+        startTime: siteShift.shift, // Use shift as start time (MD1, MD2, PM, etc.)
+        endTime: '', // No end time data available
+        status: 'scheduled',
+        notes: undefined
+      };
+      schedules.push(schedule);
+    }
+  }
+
+  return { providers, sites, schedules };
+};
+
+const getSpecialtyFromName = (providerName: string): string => {
+  const name = providerName.toLowerCase();
+  if (name.includes('dr.') || name.includes('doctor')) return 'Physician';
+  if (name.includes('nurse') || name.includes('rn')) return 'Nursing';
+  if (name.includes('tech') || name.includes('technician')) return 'Technical';
+  return 'General Practice';
+};
+
+const getProviderTypeFromCode = (code: string): string => {
+  switch (code) {
+    case 'MD1': return 'Primary Care';
+    case 'MD2': return 'Specialty Care';
+    case 'PM': return 'Practice Management';
+    default: return 'Healthcare Facility';
+  }
 };
 
 const parseScheduleData = (data: any[]): ScheduleData => {
@@ -41,8 +180,9 @@ const parseScheduleData = (data: any[]): ScheduleData => {
     // Extract provider information
     const providerName = row['Provider'] || row['provider'] || row['Provider Name'];
     if (providerName && !providerMap.has(providerName)) {
+      const providerId = stableProviderId(String(providerName));
       const provider: Provider = {
-        id: `provider-${providers.length + 1}`,
+        id: providerId,
         name: providerName,
         specialty: row['Specialty'] || row['specialty']
       };
@@ -53,8 +193,9 @@ const parseScheduleData = (data: any[]): ScheduleData => {
     // Extract site information
     const siteName = row['Site'] || row['site'] || row['Facility'] || row['Location'];
     if (siteName && !siteMap.has(siteName)) {
+      const siteId = stableSiteId(String(siteName));
       const site: Site = {
-        id: `site-${sites.length + 1}`,
+        id: siteId,
         name: siteName,
         type: row['Site Type'] || row['Type']
       };
@@ -68,10 +209,12 @@ const parseScheduleData = (data: any[]): ScheduleData => {
     const endTime = row['End Time'] || row['end_time'] || row['End'];
     
     if (date && startTime && providerName && siteName) {
+      const providerId = providerMap.get(providerName)!.id;
+      const siteId = siteMap.get(siteName)!.id;
       const schedule: ScheduleEntry = {
-        id: `schedule-${index}`,
-        providerId: providerMap.get(providerName)!.id,
-        siteId: siteMap.get(siteName)!.id,
+        id: stableScheduleId(providerId, siteId, date, `${startTime}_${endTime || ''}`),
+        providerId,
+        siteId,
         date: date,
         startTime: startTime,
         endTime: endTime || '',
