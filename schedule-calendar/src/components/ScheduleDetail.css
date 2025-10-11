@@ -1,0 +1,226 @@
+.schedule-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.schedule-detail-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-detail-header {
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.schedule-detail-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.close-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.schedule-detail-content {
+  padding: 16px 24px 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.no-schedules {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.no-schedules p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.schedules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.schedule-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.schedule-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-card.confirmed {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.schedule-card.cancelled {
+  border-color: #ef4444;
+  background: #fef2f2;
+  opacity: 0.8;
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.time-range {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.scheduled {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.confirmed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.schedule-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.provider-info h4,
+.site-info h5 {
+  margin: 0 0 4px 0;
+  font-weight: 600;
+  color: #111827;
+}
+
+.provider-info h4 {
+  font-size: 16px;
+}
+
+.site-info h5 {
+  font-size: 14px;
+}
+
+.specialty,
+.site-type {
+  font-size: 12px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.schedule-notes {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+  font-size: 14px;
+  color: #374151;
+}
+
+.schedule-notes strong {
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+  .schedule-detail-overlay {
+    padding: 10px;
+  }
+  
+  .schedule-detail-modal {
+    max-height: 90vh;
+  }
+  
+  .schedule-detail-header {
+    padding: 20px 20px 12px 20px;
+  }
+  
+  .schedule-detail-header h2 {
+    font-size: 18px;
+  }
+  
+  .schedule-detail-content {
+    padding: 12px 20px 20px 20px;
+  }
+  
+  .schedule-info {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .schedule-card {
+    padding: 12px;
+  }
+  
+  .time-range {
+    font-size: 16px;
+  }
+}
