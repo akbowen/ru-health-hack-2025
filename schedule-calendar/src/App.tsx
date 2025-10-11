@@ -8,7 +8,7 @@ import { parseScheduleExcel, getSampleScheduleData } from './utils/scheduleParse
 import './App.css';
 
 function App() {
-  const [scheduleData, setScheduleData] = useState<ScheduleData>(() => getSampleScheduleData());
+  const [scheduleData, setScheduleData] = useState<ScheduleData>({ providers: [], sites: [], schedules: [] });
   const [selectedProvider, setSelectedProvider] = useState<Provider | undefined>();
   const [selectedSite, setSelectedSite] = useState<Site | undefined>();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
