@@ -1,0 +1,31 @@
+# Node modules
+schedule-calendar/node_modules/
+schedule-calendar/npm-debug.log*
+schedule-calendar/yarn-debug.log*
+schedule-calendar/yarn-error.log*
+
+# Build output
+schedule-calendar/build/
+schedule-calendar/dist/
+schedule-calendar/coverage/
+
+# Local env files
+.env
+.env.*
+
+# Mac system files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Excel and data files (if you don't want to track sample-data uploads)
+# sample-data/*.xlsx
+# sample-data/*.csv
+
+# React specific
+*.local
+*.cache
+
+# Misc
+*.log
