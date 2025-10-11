@@ -19,7 +19,8 @@ const createUserSchema = z.object({
 
 const updateUserSchema = z.object({
   username: z.string().optional(),
-  password: z.string().optional(),
+  // Treat empty string as undefined so password remains unchanged by default
+  password: z.string().optional().transform(val => (val === '' ? undefined : val)),
   role: z.enum(['admin', 'physician', 'hospital']).optional(),
   providerId: z.string().optional().transform(val => val === '' ? undefined : val),
   siteId: z.string().optional().transform(val => val === '' ? undefined : val)
@@ -60,7 +61,8 @@ app.put('/api/users/:username', async (req: Request, res: Response) => {
   try {
     const existing = await dbGet('SELECT * FROM users WHERE username=?', [username]);
     if (!existing) return res.status(404).json({ error: 'User not found' });
-    const newPassword = password ?? existing.password;
+    // If password is undefined (blank in UI), keep existing password
+    const newPassword = password === undefined ? existing.password : password;
     const newRole = role ?? existing.role;
     const newProviderId = providerId ?? existing.providerId;
     const newSiteId = siteId ?? existing.siteId;
