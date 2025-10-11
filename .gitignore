@@ -45,3 +45,6 @@ yarn-error.log*
 # Ignore build artifacts (if any)
 dist/
 build/
+
+package-lock.json
+package.json
