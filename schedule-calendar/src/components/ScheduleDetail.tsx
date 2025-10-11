@@ -56,12 +56,31 @@ const ScheduleDetail: React.FC<ScheduleDetailProps> = ({
           ) : (
             <div className="schedules-list">
               {daySchedules
-                .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                .sort((a, b) => {
+                  // Sort by shift type in chronological order: MD1 → MD2 → PM
+                  const shiftOrder: { [key: string]: number } = {
+                    'MD1': 1,   // First shift
+                    'MD2': 2,   // Second shift
+                    'PM': 3     // Practice Management (last)
+                  };
+                  
+                  const orderA = shiftOrder[a.startTime] || 999;
+                  const orderB = shiftOrder[b.startTime] || 999;
+                  
+                  if (orderA !== orderB) {
+                    return orderA - orderB;
+                  }
+                  
+                  // If same shift type, sort alphabetically by provider
+                  const providerA = providers.find(p => p.id === a.providerId)?.name || '';
+                  const providerB = providers.find(p => p.id === b.providerId)?.name || '';
+                  return providerA.localeCompare(providerB);
+                })
                 .map(schedule => (
                 <div key={schedule.id} className={`schedule-card ${schedule.status}`}>
                   <div className="schedule-header">
                     <div className="time-range">
-                      {schedule.startTime} - {schedule.endTime}
+                      {schedule.startTime}
                     </div>
                     <div className={`status-badge ${schedule.status}`}>
                       {schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}

@@ -72,7 +72,28 @@ const Calendar: React.FC<CalendarProps> = ({
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getSchedulesForDate = (date: Date) => {
-    return filteredSchedules.filter(schedule => isSameDay(schedule.date, date));
+    const daySchedules = filteredSchedules.filter(schedule => isSameDay(schedule.date, date));
+    
+    // Sort schedules by shift type in chronological order: MD1 → MD2 → PM
+    const shiftOrder: { [key: string]: number } = {
+      'MD1': 1,   // First shift
+      'MD2': 2,   // Second shift  
+      'PM': 3     // Practice Management (last)
+    };
+    
+    return daySchedules.sort((a, b) => {
+      const orderA = shiftOrder[a.startTime] || 999;
+      const orderB = shiftOrder[b.startTime] || 999;
+      
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // If same shift type, sort by provider name
+      const providerA = getProviderName(a.providerId);
+      const providerB = getProviderName(b.providerId);
+      return providerA.localeCompare(providerB);
+    });
   };
 
   const getProviderName = (providerId: string) => {

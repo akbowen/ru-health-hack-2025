@@ -60,7 +60,7 @@ const parseComplexScheduleData = (rawData: any[][]): ScheduleData => {
         const sitesList = sitesStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
         
         facilitiesData.push({
-          facilityGroup: `${providerType} - Column ${colIndex}`,
+          facilityGroup: providerType, // Just use MD1, MD2, PM without column reference
           sites: sitesList
         });
         
@@ -127,8 +127,8 @@ const parseComplexScheduleData = (rawData: any[][]): ScheduleData => {
             providerId: provider.id,
             siteId: site.id,
             date: new Date(scheduleDate),
-            startTime: getDefaultStartTime(facilityInfo.facilityGroup),
-            endTime: getDefaultEndTime(facilityInfo.facilityGroup),
+            startTime: facilityInfo.facilityGroup, // Use the actual shift name (MD1, MD2, PM, etc.)
+            endTime: '', // No end time since we don't have that data
             status: 'scheduled',
             notes: providerName.includes('(Gap)') ? 'Gap coverage' : undefined
           };
@@ -169,20 +169,6 @@ const getProviderTypeFromCode = (code: string): string => {
   }
 };
 
-const getDefaultStartTime = (facilityGroup: string): string => {
-  if (facilityGroup.includes('MD1')) return '08:00';
-  if (facilityGroup.includes('MD2')) return '09:00';
-  if (facilityGroup.includes('PM')) return '07:00';
-  return '08:00';
-};
-
-const getDefaultEndTime = (facilityGroup: string): string => {
-  if (facilityGroup.includes('MD1')) return '17:00';
-  if (facilityGroup.includes('MD2')) return '18:00';
-  if (facilityGroup.includes('PM')) return '16:00';
-  return '17:00';
-};
-
 // Keep the existing simple parser for backward compatibility
 export const parseExcelFile = parseScheduleExcel;
 
@@ -216,24 +202,24 @@ export const getSampleScheduleData = (): ScheduleData => {
 
   const schedules: ScheduleEntry[] = [
     // October 16, 2025 (Wednesday)
-    { id: 'sch1', providerId: 'p1', siteId: 's1', date: new Date(2025, 9, 16), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch2', providerId: 'p2', siteId: 's3', date: new Date(2025, 9, 16), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch3', providerId: 'p3', siteId: 's4', date: new Date(2025, 9, 16), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
+    { id: 'sch1', providerId: 'p1', siteId: 's1', date: new Date(2025, 9, 16), startTime: 'MD1', endTime: '', status: 'scheduled' },
+    { id: 'sch2', providerId: 'p2', siteId: 's3', date: new Date(2025, 9, 16), startTime: 'MD1', endTime: '', status: 'scheduled' },
+    { id: 'sch3', providerId: 'p3', siteId: 's4', date: new Date(2025, 9, 16), startTime: 'MD2', endTime: '', status: 'scheduled' },
     
     // October 17, 2025 (Thursday)  
-    { id: 'sch4', providerId: 'p5', siteId: 's1', date: new Date(2025, 9, 17), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch5', providerId: 'p2', siteId: 's3', date: new Date(2025, 9, 17), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch6', providerId: 'p7', siteId: 's6', date: new Date(2025, 9, 17), startTime: '09:00', endTime: '18:00', status: 'scheduled' },
+    { id: 'sch4', providerId: 'p5', siteId: 's1', date: new Date(2025, 9, 17), startTime: 'MD1', endTime: '', status: 'scheduled' },
+    { id: 'sch5', providerId: 'p2', siteId: 's3', date: new Date(2025, 9, 17), startTime: 'MD2', endTime: '', status: 'scheduled' },
+    { id: 'sch6', providerId: 'p7', siteId: 's6', date: new Date(2025, 9, 17), startTime: 'PM', endTime: '', status: 'scheduled' },
     
     // October 18, 2025 (Friday)
-    { id: 'sch7', providerId: 'p1', siteId: 's2', date: new Date(2025, 9, 18), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch8', providerId: 'p6', siteId: 's5', date: new Date(2025, 9, 18), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch9', providerId: 'p9', siteId: 's8', date: new Date(2025, 9, 18), startTime: '07:00', endTime: '16:00', status: 'scheduled' },
+    { id: 'sch7', providerId: 'p1', siteId: 's2', date: new Date(2025, 9, 18), startTime: 'MD1', endTime: '', status: 'scheduled' },
+    { id: 'sch8', providerId: 'p6', siteId: 's5', date: new Date(2025, 9, 18), startTime: 'MD2', endTime: '', status: 'scheduled' },
+    { id: 'sch9', providerId: 'p9', siteId: 's8', date: new Date(2025, 9, 18), startTime: 'PM', endTime: '', status: 'scheduled' },
     
     // October 19, 2025 (Saturday)
-    { id: 'sch10', providerId: 'p5', siteId: 's1', date: new Date(2025, 9, 19), startTime: '08:00', endTime: '17:00', status: 'scheduled' },
-    { id: 'sch11', providerId: 'p10', siteId: 's9', date: new Date(2025, 9, 19), startTime: '07:00', endTime: '16:00', status: 'scheduled' },
-    { id: 'sch12', providerId: 'p8', siteId: 's7', date: new Date(2025, 9, 19), startTime: '09:00', endTime: '18:00', status: 'scheduled' }
+    { id: 'sch10', providerId: 'p5', siteId: 's1', date: new Date(2025, 9, 19), startTime: 'MD1', endTime: '', status: 'scheduled' },
+    { id: 'sch11', providerId: 'p10', siteId: 's9', date: new Date(2025, 9, 19), startTime: 'PM', endTime: '', status: 'scheduled' },
+    { id: 'sch12', providerId: 'p8', siteId: 's7', date: new Date(2025, 9, 19), startTime: 'MD2', endTime: '', status: 'scheduled' }
   ];
 
   return { providers, sites, schedules };
