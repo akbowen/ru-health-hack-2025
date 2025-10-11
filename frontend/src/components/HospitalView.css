@@ -1,0 +1,74 @@
+.hospital-view {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hospital-view header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  position: relative;
+}
+
+.hospital-view h2 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.hospital-view section {
+  margin-bottom: 30px;
+}
+
+.hospital-view section h3 {
+  color: #34495e;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #3498db;
+}
+
+.provider-list {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.provider-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-left: 4px solid #3498db;
+}
+
+.provider-card h4 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 1.2em;
+}
+
+.provider-card p {
+  margin: 5px 0;
+  color: #7f8c8d;
+  font-size: 0.9em;
+}
+
+.logout-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  background: #c0392b;
+}

@@ -1,11 +1,12 @@
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-export type UserRole = 'admin' | 'physician';
+export type UserRole = 'admin' | 'physician' | 'hospital';
 
 export interface ApiUser {
   username: string;
   role: UserRole;
   providerId?: string | null;
+  siteId?: string | null;
 }
 
 export interface CreateUserInput {
@@ -13,12 +14,14 @@ export interface CreateUserInput {
   password: string;
   role: UserRole;
   providerId?: string;
+  siteId?: string;
 }
 
 export interface UpdateUserInput {
   password?: string;
   role?: UserRole;
   providerId?: string;
+  siteId?: string;
 }
 
 async function request(path: string, options?: RequestInit) {

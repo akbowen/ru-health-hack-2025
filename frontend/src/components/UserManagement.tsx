@@ -1,28 +1,30 @@
 
 import React, { useState } from 'react';
-import { Provider } from '../types/schedule';
+import { Provider, Site } from '../types/schedule';
 
-export type UserRole = 'admin' | 'physician';
+export type UserRole = 'admin' | 'physician' | 'hospital';
 
 export interface UserAccount {
   username: string;
   password: string;
   role: UserRole;
   providerId?: string; // Only for physicians
+  siteId?: string; // Only for hospital users
 }
 
 
 interface UserManagementProps {
   users: UserAccount[];
   providers: Provider[];
+  sites: Site[];
   onAdd: (user: UserAccount) => void;
   onEdit: (user: UserAccount) => void;
   onDelete: (username: string) => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd, onEdit, onDelete }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ users, providers, sites, onAdd, onEdit, onDelete }) => {
   const [editing, setEditing] = useState<UserAccount | null>(null);
-  const [newUser, setNewUser] = useState<UserAccount>({ username: '', password: '', role: 'physician', providerId: '' });
+  const [newUser, setNewUser] = useState<UserAccount>({ username: '', password: '', role: 'physician', providerId: '', siteId: '' });
 
   const handleEdit = (user: UserAccount) => setEditing(user);
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -40,8 +42,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd
   const handleAdd = () => {
     if (!newUser.username || !newUser.password) return;
     if (newUser.role === 'physician' && !newUser.providerId) return;
+    if (newUser.role === 'hospital' && !newUser.siteId) return;
     onAdd(newUser);
-    setNewUser({ username: '', password: '', role: 'physician', providerId: '' });
+    setNewUser({ username: '', password: '', role: 'physician', providerId: '', siteId: '' });
   };
 
   return (
@@ -54,6 +57,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd
             <th>Role</th>
             <th>Password</th>
             <th>Provider</th>
+            <th>Site</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -67,6 +71,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd
                 <select name="role" value={editing.role} onChange={handleEditChange}>
                   <option value="admin">admin</option>
                   <option value="physician">physician</option>
+                  <option value="hospital">hospital</option>
                 </select>
               ) : user.role}</td>
               <td>{editing?.username === user.username ? (
@@ -81,6 +86,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd
                 </select>
               ) : user.role === 'physician' ? (
                 providers.find(p => p.id === user.providerId)?.name || <span style={{color:'#aaa'}}>Not linked</span>
+              ) : '-'}</td>
+              <td>{editing?.username === user.username && editing.role === 'hospital' ? (
+                <select name="siteId" value={editing.siteId || ''} onChange={handleEditChange}>
+                  <option value="">-- Select Site --</option>
+                  {sites.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              ) : user.role === 'hospital' ? (
+                sites.find(s => s.id === user.siteId)?.name || <span style={{color:'#aaa'}}>Not linked</span>
               ) : '-'}</td>
               <td>
                 {editing?.username === user.username ? (
@@ -103,6 +118,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd
               <select name="role" value={newUser.role} onChange={handleAddChange}>
                 <option value="admin">admin</option>
                 <option value="physician">physician</option>
+                <option value="hospital">hospital</option>
               </select>
             </td>
             <td><input name="password" value={newUser.password} onChange={handleAddChange} type="password" /></td>
@@ -111,6 +127,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, onAdd
                 <option value="">-- Select Provider --</option>
                 {providers.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            ) : '-'}</td>
+            <td>{newUser.role === 'hospital' ? (
+              <select name="siteId" value={newUser.siteId || ''} onChange={handleAddChange}>
+                <option value="">-- Select Site --</option>
+                {sites.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             ) : '-'}</td>

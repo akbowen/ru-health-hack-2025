@@ -3,6 +3,8 @@ import UserManagement, { UserAccount } from './components/UserManagement';
 import './components/UserManagement.css';
 import PhysicianView from './components/PhysicianView';
 import './components/PhysicianView.css';
+import HospitalView from './components/HospitalView';
+import './components/HospitalView.css';
 import Calendar from './components/Calendar';
 import FilterPanel from './components/FilterPanel';
 import ScheduleDetail from './components/ScheduleDetail';
@@ -14,10 +16,10 @@ import './App.css';
 
 function getInitialAuth() {
   // For demo: not logged in
-  return { isAuthenticated: false, username: '', role: undefined, providerId: undefined as string | undefined };
+  return { isAuthenticated: false, username: '', role: undefined, providerId: undefined as string | undefined, siteId: undefined as string | undefined };
 }
 
-export type UserRole = 'admin' | 'physician';
+export type UserRole = 'admin' | 'physician' | 'hospital';
 
 
 function App() {
@@ -30,7 +32,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [successMessage, setSuccessMessage] = useState<string | undefined>();
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean; username: string; role?: UserRole; providerId?: string | null }>(getInitialAuth());
+  const [auth, setAuth] = useState<{ isAuthenticated: boolean; username: string; role?: UserRole; providerId?: string | null; siteId?: string | null }>(getInitialAuth());
 
   // User accounts state (loaded from database)
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -38,15 +40,22 @@ function App() {
   const handleAddUser = async (user: UserAccount) => {
     try {
       const { api } = await import('./utils/api');
-      await api.createUser({
+      
+      // Clean up the data before sending
+      const userData = {
         username: user.username,
         password: user.password,
         role: user.role,
-        providerId: user.providerId
-      });
+        ...(user.providerId && user.providerId.trim() !== '' && { providerId: user.providerId }),
+        ...(user.siteId && user.siteId.trim() !== '' && { siteId: user.siteId })
+      };
+      
+      console.log('Sending user data:', userData);
+      await api.createUser(userData);
       setUsers(prev => [...prev, user]);
       setSuccessMessage('User created successfully');
     } catch (error: any) {
+      console.error('Failed to create user:', error);
       setError(`Failed to create user: ${error.message}`);
     }
   };
@@ -57,7 +66,8 @@ function App() {
       await api.updateUser(user.username, {
         password: user.password,
         role: user.role,
-        providerId: user.providerId
+        providerId: user.providerId,
+        siteId: user.siteId
       });
       setUsers(prev => prev.map(u => u.username === user.username ? user : u));
       setSuccessMessage('User updated successfully');
@@ -107,12 +117,12 @@ function App() {
     setSelectedDate(undefined);
   };
 
-  const handleLogin = async (user: { username: string; role: UserRole; providerId?: string | null }) => {
-    setAuth({ isAuthenticated: true, username: user.username, role: user.role, providerId: user.providerId });
+  const handleLogin = async (user: { username: string; role: UserRole; providerId?: string | null; siteId?: string | null }) => {
+    setAuth({ isAuthenticated: true, username: user.username, role: user.role, providerId: user.providerId, siteId: user.siteId });
     await loadScheduleData();
   };
   const handleLogout = () => {
-    setAuth({ isAuthenticated: false, username: '', role: undefined, providerId: undefined });
+    setAuth({ isAuthenticated: false, username: '', role: undefined, providerId: undefined, siteId: undefined });
     // Do NOT clear scheduleData here; keep it loaded for next login
   };
 
@@ -176,7 +186,8 @@ function App() {
         username: u.username,
         password: '', // Password not returned by API
         role: u.role,
-        providerId: u.providerId || undefined
+        providerId: u.providerId || undefined,
+        siteId: u.siteId || undefined
       }));
       setUsers(convertedUsers);
     } catch (err) {
@@ -239,6 +250,38 @@ function App() {
     );
   }
 
+  if (auth.role === 'hospital') {
+    // Find site object for logged-in hospital user
+    let site: Site | undefined = undefined;
+    if (auth.siteId) {
+      site = scheduleData.sites.find(s => s.id === auth.siteId);
+    }
+    // Fallback to username matching if siteId isn't set or not found
+    if (!site) {
+      site = scheduleData.sites.find(s => s.name.toLowerCase() === auth.username.toLowerCase());
+    }
+    if (!site) {
+      return (
+        <div className="unauthorized">
+          <h2>No Site Record</h2>
+          <p>Your account is not linked to a site in the schedule data.</p>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      );
+    }
+    return (
+      <>
+        <div style={{ background: '#f8f8e0', border: '1px solid #ccc', padding: 10, margin: '10px 0', borderRadius: 6, fontSize: 14 }}>
+          <b>My Account Debug:</b><br />
+          Username: <code>{auth.username}</code><br />
+          SiteId: <code>{auth.siteId || 'Not set'}</code><br />
+          Matched Site: <code>{site ? site.name + ' (' + site.id + ')' : 'None'}</code>
+        </div>
+        <HospitalView site={site} scheduleData={scheduleData} onLogout={handleLogout} />
+      </>
+    );
+  }
+
   if (auth.role !== 'admin') {
     return (
       <div className="unauthorized">
@@ -277,6 +320,7 @@ function App() {
           <UserManagement
             users={users}
             providers={scheduleData.providers}
+            sites={scheduleData.sites}
             onAdd={handleAddUser}
             onEdit={handleEditUser}
             onDelete={handleDeleteUser}

@@ -3,7 +3,7 @@ import './Login.css';
 import { api } from '../utils/api';
 
 interface LoginProps {
-  onLogin: (user: { username: string; role: 'admin' | 'physician'; providerId?: string | null }) => void;
+  onLogin: (user: { username: string; role: 'admin' | 'physician' | 'hospital'; providerId?: string | null; siteId?: string | null }) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {

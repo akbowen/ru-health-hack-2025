@@ -10,22 +10,24 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Users API
 const createUserSchema = z.object({
-  username: z.string(),
+  username: z.string().min(1),
   password: z.string().min(1),
-  role: z.enum(['admin', 'physician']),
-  providerId: z.string().optional()
+  role: z.enum(['admin', 'physician', 'hospital']),
+  providerId: z.string().optional().transform(val => val === '' ? undefined : val),
+  siteId: z.string().optional().transform(val => val === '' ? undefined : val)
 });
 
 const updateUserSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
-  role: z.enum(['admin', 'physician']).optional(),
-  providerId: z.string().optional()
+  role: z.enum(['admin', 'physician', 'hospital']).optional(),
+  providerId: z.string().optional().transform(val => val === '' ? undefined : val),
+  siteId: z.string().optional().transform(val => val === '' ? undefined : val)
 });
 
 app.get('/api/users', async (_req: Request, res: Response) => {
   try {
-    const rows = await dbAll('SELECT username, role, providerId FROM users');
+    const rows = await dbAll('SELECT username, role, providerId, siteId FROM users');
     res.json(rows);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -33,14 +35,19 @@ app.get('/api/users', async (_req: Request, res: Response) => {
 });
 
 app.post('/api/users', async (req: Request, res: Response) => {
+  console.log('Creating user with data:', req.body);
   const parsed = createUserSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
-  const { username, password, role, providerId } = parsed.data;
+  if (!parsed.success) {
+    console.log('Validation failed:', parsed.error.format());
+    return res.status(400).json({ error: parsed.error.format() });
+  }
+  const { username, password, role, providerId, siteId } = parsed.data;
   try {
-    await dbRun('INSERT INTO users (username, password, role, providerId) VALUES (?,?,?,?)',
-      [username, password, role, providerId ?? null]);
+    await dbRun('INSERT INTO users (username, password, role, providerId, siteId) VALUES (?,?,?,?,?)',
+      [username, password, role, providerId ?? null, siteId ?? null]);
     res.status(201).json({ ok: true });
   } catch (e: any) {
+    console.log('Database error:', e.message);
     res.status(400).json({ error: e.message });
   }
 });
@@ -48,7 +55,7 @@ app.post('/api/users', async (req: Request, res: Response) => {
 app.put('/api/users/:username', async (req: Request, res: Response) => {
   const parsed = updateUserSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.format() });
-  const { password, role, providerId } = parsed.data;
+  const { password, role, providerId, siteId } = parsed.data;
   const { username } = req.params;
   try {
     const existing = await dbGet('SELECT * FROM users WHERE username=?', [username]);
@@ -56,8 +63,9 @@ app.put('/api/users/:username', async (req: Request, res: Response) => {
     const newPassword = password ?? existing.password;
     const newRole = role ?? existing.role;
     const newProviderId = providerId ?? existing.providerId;
-    await dbRun('UPDATE users SET password=?, role=?, providerId=? WHERE username=?',
-      [newPassword, newRole, newProviderId, username]);
+    const newSiteId = siteId ?? existing.siteId;
+    await dbRun('UPDATE users SET password=?, role=?, providerId=?, siteId=? WHERE username=?',
+      [newPassword, newRole, newProviderId, newSiteId, username]);
     res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -78,7 +86,7 @@ app.delete('/api/users/:username', async (req: Request, res: Response) => {
 app.post('/api/login', async (req: Request, res: Response) => {
   const { username, password } = req.body;
   try {
-    const row = await dbGet('SELECT username, role, providerId FROM users WHERE username=? AND password=?', [username, password]);
+    const row = await dbGet('SELECT username, role, providerId, siteId FROM users WHERE username=? AND password=?', [username, password]);
     if (!row) return res.status(401).json({ error: 'Invalid credentials' });
     res.json(row);
   } catch (e: any) {
