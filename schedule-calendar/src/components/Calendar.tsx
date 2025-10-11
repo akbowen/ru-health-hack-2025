@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay } from 'date-fns';
 import { ScheduleEntry, Provider, Site } from '../types/schedule';
 import './Calendar.css';
 
@@ -67,9 +67,16 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  // Days within the month only
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // Number of blanks before the 1st to align with weekday header (0=Sun..6=Sat)
+  const leadingBlanksCount = getDay(monthStart);
+  const leadingBlanks = Array.from({ length: leadingBlanksCount }, () => null as Date | null);
+  // Trailing blanks to complete the last week row
+  const totalCells = leadingBlanksCount + monthDays.length;
+  const trailingBlanksCount = (7 - (totalCells % 7)) % 7;
+  const trailingBlanks = Array.from({ length: trailingBlanksCount }, () => null as Date | null);
+  const calendarCells: Array<Date | null> = [...leadingBlanks, ...monthDays, ...trailingBlanks];
 
   const getSchedulesForDate = (date: Date) => {
     const daySchedules = filteredSchedules.filter(schedule => isSameDay(schedule.date, date));
@@ -214,15 +221,18 @@ const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       <div className="calendar-grid">
-        {calendarDays.map(day => {
+        {calendarCells.map((cell, idx) => {
+          if (!cell) {
+            return <div key={`blank-${idx}`} className="calendar-day blank-day" />;
+          }
+          const day = cell;
           const daySchedules = getSchedulesForDate(day);
           const isCurrentDay = isToday(day);
-          const isInCurrentMonth = isCurrentMonth(day);
 
           return (
             <div
               key={day.toISOString()}
-              className={`calendar-day ${isCurrentDay ? 'today' : ''} ${daySchedules.length > 0 ? 'has-schedule' : ''} ${!isInCurrentMonth ? 'other-month' : ''}`}
+              className={`calendar-day ${isCurrentDay ? 'today' : ''} ${daySchedules.length > 0 ? 'has-schedule' : ''}`}
               onClick={() => onDateClick?.(day)}
             >
               <div className="day-number">

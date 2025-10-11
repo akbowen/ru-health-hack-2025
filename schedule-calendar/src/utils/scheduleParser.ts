@@ -90,10 +90,8 @@ const parseComplexScheduleData = (rawData: any[][]): ScheduleData => {
     
     if (!dayOfWeek || typeof dayNumber !== 'number') continue;
     
-    // Create a date based on the day number (October 2025)
-    const baseDate = new Date(2025, 9, 15); // October 15, 2025 as base (Wednesday)
-    const scheduleDate = new Date(baseDate);
-    scheduleDate.setDate(baseDate.getDate() + dayNumber - 1);
+  // Use the number in column B as the day of the month for October 2025
+  const scheduleDate = new Date(2025, 9, dayNumber);
     
     // Process each column (facility assignment)
     for (let colIndex = 2; colIndex < row.length && colIndex - 2 < facilitiesData.length; colIndex++) {
