@@ -1,0 +1,38 @@
+.physician-view {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+.physician-view header {
+  position: relative;
+  margin-bottom: 2rem;
+}
+.physician-view .logout-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+.dow-credits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.dow-credit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+.date-credits {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
