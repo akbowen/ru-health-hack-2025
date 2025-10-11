@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Calendar from './components/Calendar';
 import FilterPanel from './components/FilterPanel';
 import ScheduleDetail from './components/ScheduleDetail';
 import StatsSummary from './components/StatsSummary';
 import { ScheduleData, Provider, Site } from './types/schedule';
-import { parseScheduleExcel, getSampleScheduleData } from './utils/scheduleParser';
+import { parseScheduleExcel } from './utils/scheduleParser';
 import './App.css';
 
 function App() {
