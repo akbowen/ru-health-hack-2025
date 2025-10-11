@@ -46,5 +46,7 @@ yarn-error.log*
 dist/
 build/
 
-package-lock.json
-package.json
+backend/package-lock.json
+backend/package.json
+frontend/package-lock.json
+frontend/package.json
