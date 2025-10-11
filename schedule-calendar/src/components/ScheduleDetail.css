@@ -224,3 +224,35 @@
     font-size: 16px;
   }
 }
+
+/* Combined sites styling */
+.combined-sites-detail {
+  margin-top: 8px;
+}
+
+.combined-sites-detail ul {
+  margin: 4px 0 0 0;
+  padding-left: 20px;
+}
+
+.combined-sites-detail li {
+  margin: 2px 0;
+  font-size: 14px;
+}
+
+.combined-sites-detail .site-type {
+  color: #666;
+  font-size: 12px;
+}
+
+.single-site-detail h5 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.single-site-detail .site-type {
+  color: #666;
+  font-size: 12px;
+  display: block;
+  margin-top: 2px;
+}

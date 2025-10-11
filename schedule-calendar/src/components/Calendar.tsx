@@ -74,14 +74,80 @@ const Calendar: React.FC<CalendarProps> = ({
   const getSchedulesForDate = (date: Date) => {
     const daySchedules = filteredSchedules.filter(schedule => isSameDay(schedule.date, date));
     
-    // Sort schedules by shift type in chronological order: MD1 → MD2 → PM
+    // If a specific site is selected, show individual entries
+    if (selectedSite) {
+      // Sort schedules by shift type in chronological order: MD1 → MD2 → PM
+      const shiftOrder: { [key: string]: number } = {
+        'MD1': 1,   // First shift
+        'MD2': 2,   // Second shift  
+        'PM': 3     // Practice Management (last)
+      };
+      
+      return daySchedules.sort((a, b) => {
+        const orderA = shiftOrder[a.startTime] || 999;
+        const orderB = shiftOrder[b.startTime] || 999;
+        
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        
+        // If same shift type, sort by provider name
+        const providerA = getProviderName(a.providerId);
+        const providerB = getProviderName(b.providerId);
+        return providerA.localeCompare(providerB);
+      });
+    }
+    
+    // If "All Sites" is selected, group by provider and shift
+    const groupedSchedules = new Map<string, {
+      providerId: string;
+      startTime: string;
+      sites: string[];
+      scheduleIds: string[];
+      status: string;
+    }>();
+    
+    daySchedules.forEach(schedule => {
+      const key = `${schedule.providerId}-${schedule.startTime}`;
+      const siteName = getSiteName(schedule.siteId);
+      
+      if (groupedSchedules.has(key)) {
+        const group = groupedSchedules.get(key)!;
+        if (!group.sites.includes(siteName)) {
+          group.sites.push(siteName);
+          group.scheduleIds.push(schedule.id);
+        }
+      } else {
+        groupedSchedules.set(key, {
+          providerId: schedule.providerId,
+          startTime: schedule.startTime,
+          sites: [siteName],
+          scheduleIds: [schedule.id],
+          status: schedule.status
+        });
+      }
+    });
+    
+    // Convert grouped data back to schedule-like objects and sort
+    const combinedSchedules = Array.from(groupedSchedules.values()).map(group => ({
+      id: group.scheduleIds.join('-'),
+      providerId: group.providerId,
+      siteId: 'combined', // Special marker for combined entries
+      date: date,
+      startTime: group.startTime,
+      endTime: '',
+      status: group.status,
+      sites: group.sites // Add sites array for combined display
+    }));
+    
+    // Sort by shift type
     const shiftOrder: { [key: string]: number } = {
       'MD1': 1,   // First shift
       'MD2': 2,   // Second shift  
       'PM': 3     // Practice Management (last)
     };
     
-    return daySchedules.sort((a, b) => {
+    return combinedSchedules.sort((a, b) => {
       const orderA = shiftOrder[a.startTime] || 999;
       const orderB = shiftOrder[b.startTime] || 999;
       
@@ -174,7 +240,13 @@ const Calendar: React.FC<CalendarProps> = ({
                           {getProviderName(schedule.providerId)}
                         </div>
                       )}
-                      {!selectedSite && (
+                      {!selectedSite && schedule.siteId === 'combined' && (schedule as any).sites && (
+                        <div className="combined-sites">
+                          {(schedule as any).sites.slice(0, 3).join(', ')}
+                          {(schedule as any).sites.length > 3 && ` +${(schedule as any).sites.length - 3} more`}
+                        </div>
+                      )}
+                      {!selectedSite && schedule.siteId !== 'combined' && (
                         <div className="site-name">
                           {getSiteName(schedule.siteId)}
                         </div>

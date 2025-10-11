@@ -231,3 +231,11 @@
     display: none;
   }
 }
+
+/* Combined sites styling */
+.combined-sites {
+  font-size: 0.75em;
+  color: #666;
+  line-height: 1.2;
+  margin-top: 2px;
+}

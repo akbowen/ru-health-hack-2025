@@ -101,6 +101,8 @@ function App() {
           schedules={scheduleData.schedules}
           providers={scheduleData.providers}
           sites={scheduleData.sites}
+          selectedProvider={selectedProvider}
+          selectedSite={selectedSite}
           onClose={handleCloseDetail}
         />
       </main>
