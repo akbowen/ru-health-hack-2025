@@ -1,7 +1,9 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, RequestHandler } from 'express'; // + RequestHandler
 import cors from 'cors';
 import { z } from 'zod';
 import { dbGet, dbAll, dbRun } from './db';
+import multer from 'multer';
+import { runScheduler } from './scheduler';
 
 const app = express();
 app.use(cors());
@@ -160,6 +162,76 @@ app.get('/api/sites', async (req: Request, res: Response) => {
   }
 });
 
+
+// Object to save the files
+const memUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB/file
+  fileFilter: (_req, file, cb) => {
+    const okExt = file.originalname.toLowerCase().endsWith('.xlsx');
+    const okMime =
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.mimetype === 'application/octet-stream';
+    if (okExt && okMime) return cb(null, true);
+    cb(new Error('Only .xlsx files are allowed'));
+  },
+});
+
+
+type UploadFields = {
+  providerAvailability?: Express.Multer.File[];
+  providerContract?: Express.Multer.File[];
+  providerCredentialing?: Express.Multer.File[];
+  facilityVolume?: Express.Multer.File[];
+  facilityCoverage?: Express.Multer.File[]
+};
+
+app.post(
+  '/api/schedule/upload',
+  memUpload.fields([
+    { name: 'providerAvailability', maxCount: 1 },
+    { name: 'providerContract', maxCount: 1 },
+    { name: 'providerCredentialing', maxCount: 1 },
+    { name: 'facilityVolume', maxCount: 1 },
+    { name: 'facilityCoverage', maxCount: 1 },
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      const files = req.files as UploadFields;
+
+      // presence checks
+      const need: (keyof UploadFields)[] = [
+        'providerAvailability',
+        'providerContract',
+        'providerCredentialing',
+        'facilityVolume',
+        'facilityCoverage'
+      ];
+      for (const k of need) {
+        if (!files?.[k]?.[0]?.buffer) {
+          return res.status(400).json({ error: `Missing file for '${k}'` });
+        }
+      }
+
+      // Run your Node scheduler logic
+      const out = runScheduler({
+        availabilityXlsx: files.providerAvailability![0].buffer,
+        contractXlsx: files.providerContract![0].buffer,
+        credentialingXlsx: files.providerCredentialing![0].buffer,
+        volumeXlsx: files.facilityVolume![0].buffer,
+        coverageXlsx: files.facilityCoverage![0].buffer,
+      });
+
+      res.json({
+        ok: true
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+
 app.get('/api/schedules', async (req: Request, res: Response) => {
   try {
     const schedules = await dbAll('SELECT id, providerId, siteId, date, startTime, endTime, status, notes FROM schedules ORDER BY date, startTime');
@@ -186,3 +258,7 @@ const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
 });
+
+
+
+
