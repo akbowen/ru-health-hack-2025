@@ -1,0 +1,220 @@
+.leave-requests-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.leave-requests-header {
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.leave-requests-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.leave-requests-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.no-requests {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.requests-section {
+  margin-bottom: 32px;
+}
+
+.requests-section:last-child {
+  margin-bottom: 0;
+}
+
+.requests-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.request-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: white;
+  transition: box-shadow 0.2s;
+}
+
+.request-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.request-card.pending {
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+}
+
+.request-card.approved {
+  border-left: 4px solid #10b981;
+  background: #ecfdf5;
+}
+
+.request-card.rejected {
+  border-left: 4px solid #ef4444;
+  background: #fef2f2;
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.request-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.request-date {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.request-details {
+  margin-bottom: 12px;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #374151;
+  min-width: 80px;
+}
+
+.detail-value {
+  color: #6b7280;
+  flex: 1;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.reject-btn,
+.approve-btn,
+.delete-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.reject-btn {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.reject-btn:hover {
+  background: #e5e7eb;
+}
+
+.approve-btn {
+  background: #10b981;
+  color: white;
+}
+
+.approve-btn:hover {
+  background: #059669;
+}
+
+.delete-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .leave-requests-modal {
+    max-height: 95vh;
+  }
+  
+  .leave-requests-header {
+    padding: 20px 20px 12px 20px;
+  }
+  
+  .leave-requests-content {
+    padding: 20px;
+  }
+  
+  .request-card {
+    padding: 12px;
+  }
+  
+  .detail-label {
+    min-width: 70px;
+  }
+}

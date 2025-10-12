@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ScheduleData, Provider, Site, ScheduleEntry } from '../types/schedule';
+import { ScheduleData, Provider, Site, ScheduleEntry } from '../components/types/schedule';
 import { stableProviderId, stableSiteId, stableScheduleId } from './id';
 
 export const parseExcelFile = async (file: File): Promise<ScheduleData> => {

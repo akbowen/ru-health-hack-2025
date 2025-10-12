@@ -1,0 +1,171 @@
+.availability-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.availability-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.availability-header {
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.availability-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.availability-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.no-alerts {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.alerts-section {
+  margin-bottom: 32px;
+}
+
+.alerts-section:last-child {
+  margin-bottom: 0;
+}
+
+.alerts-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.alert-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: white;
+  transition: box-shadow 0.2s;
+}
+
+.alert-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.alert-card.open {
+  border-left: 4px solid #3b82f6;
+  background: #eff6ff;
+}
+
+.alert-card.filled {
+  border-left: 4px solid #10b981;
+  background: #f0fdf4;
+  opacity: 0.8;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.alert-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.alert-date {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.shift-badge {
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.shift-badge.filled {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.alert-details {
+  margin-bottom: 12px;
+}
+
+.alert-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.claim-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: #3b82f6;
+  color: white;
+}
+
+.claim-btn:hover {
+  background: #2563eb;
+}
+
+@media (max-width: 768px) {
+  .availability-modal {
+    max-height: 95vh;
+  }
+  
+  .availability-header {
+    padding: 20px 20px 12px 20px;
+  }
+  
+  .availability-content {
+    padding: 20px;
+  }
+  
+  .alert-card {
+    padding: 12px;
+  }
+}

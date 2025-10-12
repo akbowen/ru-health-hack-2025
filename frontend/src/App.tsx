@@ -1,20 +1,21 @@
-import { useState, useEffect } from "react";
-import UserManagement, { UserAccount } from "./components/UserManagement";
-import AddSchedule from "./components/AddSchedule";
-import "./components/UserManagement.css";
-import PhysicianView from "./components/PhysicianView";
-import "./components/PhysicianView.css";
-import HospitalView from "./components/HospitalView";
-import "./components/HospitalView.css";
-import Calendar from "./components/Calendar";
-import AdminAnalyticsUpload from "./components/AdminAnalyticsUpload";
-import FilterPanel from "./components/FilterPanel";
-import ScheduleDetail from "./components/ScheduleDetail";
-import StatsSummary from "./components/StatsSummary";
-import { ScheduleData, Provider, Site } from "./types/schedule";
-import { parseScheduleExcel } from "./utils/scheduleParser";
-import Login from "./components/Login";
-import "./App.css";
+import { useState, useEffect } from 'react';
+import UserManagement, { UserAccount } from './components/UserManagement';
+import AddSchedule from './components/AddSchedule';
+import './components/UserManagement.css';
+import PhysicianView from './components/PhysicianView';
+import './components/PhysicianView.css';
+import HospitalView from './components/HospitalView';
+import './components/HospitalView.css';
+import Calendar from './components/Calendar';
+import FilterPanel from './components/FilterPanel';
+import ScheduleDetail from './components/ScheduleDetail';
+import StatsSummary from './components/StatsSummary';
+import { ScheduleData, Provider, Site } from './components/types/schedule';
+import { parseScheduleExcel } from './utils/scheduleParser';
+import Login from './components/Login';
+import './App.css';
+import { add } from 'date-fns';
+import AdminAnalyticsUpload from './components/AdminAnalyticsUpload';
 
 function getInitialAuth() {
   // For demo: not logged in
@@ -323,7 +324,9 @@ function App() {
     );
   }
 
-  if (auth.role === "hospital") {
+  
+
+  if (auth.role === 'hospital') {
     // Find site object for logged-in hospital user
     let site: Site | undefined = undefined;
     if (auth.siteId) {
@@ -402,6 +405,7 @@ function App() {
           >
             Calendar
           </button>
+         
           <button
             onClick={() => setAdminTab("users")}
             className={`admin-tab ${

@@ -1,6 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { ScheduleEntry, Provider, Site } from '../types/schedule';
+import { ScheduleEntry, Provider, Site } from './types/schedule';
 import './ScheduleDetail.css';
 
 interface ScheduleDetailProps {

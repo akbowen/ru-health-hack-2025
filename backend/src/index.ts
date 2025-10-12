@@ -47,6 +47,35 @@ app.get('/api/users', async (_req: Request, res: Response) => {
   }
 });
 
+app.post('/api/leave-requests', async (req: Request, res: Response) => {
+  try {
+    console.log('Received leave request:', req.body); // Add logging
+    const { physicianId, physicianName, date, shiftType, siteId, siteName, reason } = req.body;
+    
+    // Validate required fields
+    if (!physicianId || !physicianName || !date || !shiftType || !siteId || !siteName || !reason) {
+      console.error('Missing required fields:', { physicianId, physicianName, date, shiftType, siteId, siteName, reason });
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const id = `leave_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const createdAt = new Date().toISOString();
+    
+    console.log('Inserting leave request with ID:', id);
+    await dbRun(
+      `INSERT INTO leave_requests (id, physicianId, physicianName, date, shiftType, siteId, siteName, reason, status, createdAt) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [id, physicianId, physicianName, date, shiftType, siteId, siteName, reason, createdAt]
+    );
+    
+    console.log('Leave request created successfully');
+    res.status(201).json({ ok: true, id });
+  } catch (e: any) {
+    console.error('Error creating leave request:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/users', async (req: Request, res: Response) => {
   console.log('Creating user with data:', req.body);
   const parsed = createUserSchema.safeParse(req.body);
@@ -328,6 +357,16 @@ app.get('/api/analysis/shift-counts', async (req: Request, res: Response) => {
     res.json(shiftCounts);
   } catch (e: any) {
     console.error('Shift count analysis error:', e);
+  }
+});
+app.post('/api/schedule/reset', async (_req: Request, res: Response) => {
+  try {
+    // Clear in child->parent order to avoid FK issues
+    await dbRun('DELETE FROM schedules');
+    await dbRun('DELETE FROM providers');
+    await dbRun('DELETE FROM sites');
+    res.json({ ok: true });
+  } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -346,6 +385,30 @@ app.get('/api/analysis/volumes', async (req: Request, res: Response) => {
     res.json(volumes);
   } catch (e: any) {
     console.error('Volume analysis error:', e);
+     }
+});
+// ============ ADD THESE NEW ROUTES HERE ============
+
+// Leave Requests API
+app.get('/api/leave-requests', async (req: Request, res: Response) => {
+  try {
+    const { physicianId, siteId } = req.query;
+    let query = 'SELECT * FROM leave_requests WHERE 1=1';
+    const params: any[] = [];
+    
+    if (physicianId) {
+      query += ' AND physicianId = ?';
+      params.push(physicianId);
+    }
+    if (siteId) {
+      query += ' AND siteId = ?';
+      params.push(siteId);
+    }
+    
+    query += ' ORDER BY createdAt DESC';
+    const requests = await dbAll(query, params);
+    res.json(requests);
+  } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
@@ -558,22 +621,130 @@ app.get('/api/physician-satisfaction/:username', async (req: Request, res: Respo
     const { username } = req.params;
     const row = await dbGet('SELECT happiness_rating, feedback FROM physician_satisfaction WHERE username=?', [username]);
     res.json(row || { happiness_rating: null, feedback: null });
+  }
+  catch (e: any) {
+    console.error('Consecutive shifts analysis error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+    
+app.post('/api/leave-requests', async (req: Request, res: Response) => {
+  try {
+    const { physicianId, physicianName, date, shiftType, siteId, siteName, reason } = req.body;
+    const id = `leave_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const createdAt = new Date().toISOString();
+    
+    await dbRun(
+      `INSERT INTO leave_requests (id, physicianId, physicianName, date, shiftType, siteId, siteName, reason, status, createdAt) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+      [id, physicianId, physicianName, date, shiftType, siteId, siteName, reason, createdAt]
+    );
+    
+    res.status(201).json({ ok: true, id });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
 });
 
+// Assuming: import { Request, Response } from 'express';
+// and dbRun / dbGet are async helpers returning Promises.
+
 app.post('/api/physician-satisfaction', async (req: Request, res: Response) => {
   try {
-    const { username, happiness_rating, feedback } = req.body;
-    
-    if (!username || happiness_rating === undefined) {
-      return res.status(400).json({ error: 'Username and happiness_rating are required' });
+    const { username, happiness_rating, feedback } = req.body as {
+      username?: string;
+      happiness_rating?: number;
+      feedback?: string | null;
+    };
+
+    if (!username || happiness_rating === undefined || happiness_rating === null) {
+      return res
+        .status(400)
+        .json({ error: 'Username and happiness_rating are required' });
     }
+
+    await dbRun(
+      `INSERT OR REPLACE INTO physician_satisfaction
+       (username, happiness_rating, feedback, updated_at)
+       VALUES (?, ?, ?, datetime('now'))`,
+      [username, happiness_rating, feedback ?? null]
+    );
+
+    return res.json({ ok: true });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/leave-requests/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const { respondedBy } = req.body as { respondedBy?: string };
+    const respondedAt = new Date().toISOString();
+
+    const request: any = await dbGet(
+      'SELECT * FROM leave_requests WHERE id = ?',
+      [id]
+    );
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    await dbRun(
+      `UPDATE leave_requests
+       SET status = ?, respondedAt = ?, respondedBy = ?
+       WHERE id = ?`,
+      ['approved', respondedAt, respondedBy ?? null, id]
+    );
+
+    // If your schedules table uses `shiftType` (not `startTime`), delete with shiftType:
+    await dbRun(
+      `DELETE FROM schedules
+       WHERE providerId = ? AND siteId = ? AND date = ? AND shiftType = ?`,
+      [request.physicianId, request.siteId, request.date, request.shiftType]
+    );
+
+    // If your schema really uses startTime instead of shiftType, use this instead:
+    // await dbRun(
+    //   'DELETE FROM schedules WHERE providerId = ? AND siteId = ? AND date = ? AND startTime = ?',
+    //   [request.physicianId, request.siteId, request.date, request.shiftType]
+    // );
+
+    const alertId = `alert_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    await dbRun(
+      `INSERT INTO availability_alerts
+       (id, siteId, siteName, date, shiftType, originalPhysicianName, createdAt, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'open')`,
+      [
+        alertId,
+        request.siteId,
+        request.siteName,
+        request.date,
+        request.shiftType,
+        request.physicianName,
+        new Date().toISOString(),
+      ]
+    );
+
+    return res.json({ ok: true, alertId });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ============================================================================
+// START SERVER
+// ============================================================================
+app.put('/api/leave-requests/:id/reject', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { respondedBy } = req.body;
+    const respondedAt = new Date().toISOString();
     
     await dbRun(
-      'INSERT OR REPLACE INTO physician_satisfaction (username, happiness_rating, feedback, updated_at) VALUES (?, ?, ?, datetime("now"))',
-      [username, happiness_rating, feedback || null]
+      'UPDATE leave_requests SET status = ?, respondedAt = ?, respondedBy = ? WHERE id = ?',
+      ['rejected', respondedAt, respondedBy, id]
     );
     
     res.json({ ok: true });
@@ -582,9 +753,70 @@ app.post('/api/physician-satisfaction', async (req: Request, res: Response) => {
   }
 });
 
-// ============================================================================
-// START SERVER
-// ============================================================================
+// Availability Alerts API
+app.get('/api/availability-alerts', async (req: Request, res: Response) => {
+  try {
+    const { siteId, status } = req.query;
+    let query = 'SELECT * FROM availability_alerts WHERE 1=1';
+    const params: any[] = [];
+    
+    if (siteId) {
+      query += ' AND siteId = ?';
+      params.push(siteId);
+    }
+    if (status) {
+      query += ' AND status = ?';
+      params.push(status);
+    }
+    
+    query += ' ORDER BY createdAt DESC';
+    const alerts = await dbAll(query, params);
+    res.json(alerts);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/availability-alerts/:id/claim', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { physicianId, physicianName } = req.body;
+    
+    const alert: any = await dbGet('SELECT * FROM availability_alerts WHERE id = ?', [id]);
+    if (!alert) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
+    if (alert.status !== 'open') {
+      return res.status(400).json({ error: 'Alert already filled' });
+    }
+    
+    await dbRun(
+      'UPDATE availability_alerts SET status = ?, filledBy = ?, filledByName = ? WHERE id = ?',
+      ['filled', physicianId, physicianName, id]
+    );
+    
+    const scheduleId = `schedule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await dbRun(
+      `INSERT INTO schedules (id, providerId, siteId, date, startTime, endTime, status, notes)
+       VALUES (?, ?, ?, ?, ?, '', 'confirmed', 'Claimed from availability alert')`,
+      [scheduleId, physicianId, alert.siteId, alert.date, alert.shiftType]
+    );
+    
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/leave-requests/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await dbRun('DELETE FROM leave_requests WHERE id = ?', [id]);
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {

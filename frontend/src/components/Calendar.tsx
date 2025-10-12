@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay } from 'date-fns';
-import { ScheduleEntry, Provider, Site } from '../types/schedule';
+import { ScheduleEntry, Provider, Site } from './types/schedule';
 import './Calendar.css';
 
 interface CalendarProps {
@@ -183,6 +183,140 @@ const Calendar: React.FC<CalendarProps> = ({
     icsContent.push('END:VCALENDAR');
     
     return icsContent.join('\r\n');
+  };
+
+  // Extract complete schedule data for AI/Chatbot
+  const exportCompleteScheduleData = () => {
+    setShowExportMenu(false);
+    
+    // Get all schedules for the current month
+    const monthSchedules = filteredSchedules.filter(schedule => {
+      const scheduleMonth = schedule.date.getMonth();
+      const scheduleYear = schedule.date.getFullYear();
+      return scheduleMonth === currentDate.getMonth() && scheduleYear === currentDate.getFullYear();
+    });
+
+    if (monthSchedules.length === 0) {
+      alert('No schedules found for this month.');
+      return;
+    }
+
+    // Group schedules by date
+    const schedulesByDate = new Map<string, ScheduleEntry[]>();
+    
+    monthSchedules.forEach(schedule => {
+      const dateKey = format(schedule.date, 'yyyy-MM-dd');
+      if (!schedulesByDate.has(dateKey)) {
+        schedulesByDate.set(dateKey, []);
+      }
+      schedulesByDate.get(dateKey)!.push(schedule);
+    });
+
+    // Generate comprehensive text document
+    let documentContent = `COMPLETE SCHEDULE DATA - ${format(currentDate, 'MMMM yyyy')}\n`;
+    documentContent += `Generated on: ${format(new Date(), 'PPpp')}\n`;
+    documentContent += `Total Schedules: ${monthSchedules.length}\n`;
+    documentContent += `\n${'='.repeat(80)}\n\n`;
+
+    // Sort dates
+    const sortedDates = Array.from(schedulesByDate.keys()).sort();
+
+    sortedDates.forEach(dateKey => {
+      const date = new Date(dateKey);
+      const daySchedules = schedulesByDate.get(dateKey)!;
+      
+      documentContent += `DATE: ${format(date, 'EEEE, MMMM d, yyyy')}\n`;
+      documentContent += `${'-'.repeat(80)}\n`;
+      documentContent += `Total Entries: ${daySchedules.length}\n\n`;
+
+      // Sort schedules for this date
+      const sortedSchedules = daySchedules.sort((a, b) => {
+        const shiftOrder: { [key: string]: number } = { 'MD1': 1, 'MD2': 2, 'PM': 3 };
+        const orderA = shiftOrder[a.startTime] || 999;
+        const orderB = shiftOrder[b.startTime] || 999;
+        
+        if (orderA !== orderB) return orderA - orderB;
+        
+        const providerA = getProviderName(a.providerId);
+        const providerB = getProviderName(b.providerId);
+        return providerA.localeCompare(providerB);
+      });
+
+      sortedSchedules.forEach((schedule, index) => {
+        documentContent += `  Entry ${index + 1}:\n`;
+        documentContent += `    Shift Type: ${schedule.startTime}\n`;
+        documentContent += `    Provider: ${getProviderName(schedule.providerId)}\n`;
+        documentContent += `    Site: ${getSiteName(schedule.siteId)}\n`;
+        documentContent += `    Status: ${schedule.status}\n`;
+        documentContent += `    Start Time: ${schedule.startTime}\n`;
+        documentContent += `    End Time: ${schedule.endTime || 'Not specified'}\n`;
+        documentContent += `    Schedule ID: ${schedule.id}\n`;
+        documentContent += `\n`;
+      });
+
+      documentContent += `\n`;
+    });
+
+    // Add summary statistics
+    documentContent += `${'='.repeat(80)}\n`;
+    documentContent += `SUMMARY STATISTICS\n`;
+    documentContent += `${'='.repeat(80)}\n\n`;
+
+    // Count by shift type
+    const shiftCounts = new Map<string, number>();
+    monthSchedules.forEach(schedule => {
+      const count = shiftCounts.get(schedule.startTime) || 0;
+      shiftCounts.set(schedule.startTime, count + 1);
+    });
+
+    documentContent += `Schedules by Shift Type:\n`;
+    shiftCounts.forEach((count, shift) => {
+      documentContent += `  ${shift}: ${count} shifts\n`;
+    });
+    documentContent += `\n`;
+
+    // Count by provider
+    const providerCounts = new Map<string, number>();
+    monthSchedules.forEach(schedule => {
+      const providerName = getProviderName(schedule.providerId);
+      const count = providerCounts.get(providerName) || 0;
+      providerCounts.set(providerName, count + 1);
+    });
+
+    documentContent += `Schedules by Provider:\n`;
+    Array.from(providerCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([provider, count]) => {
+        documentContent += `  ${provider}: ${count} shifts\n`;
+      });
+    documentContent += `\n`;
+
+    // Count by site
+    const siteCounts = new Map<string, number>();
+    monthSchedules.forEach(schedule => {
+      const siteName = getSiteName(schedule.siteId);
+      const count = siteCounts.get(siteName) || 0;
+      siteCounts.set(siteName, count + 1);
+    });
+
+    documentContent += `Schedules by Site:\n`;
+    Array.from(siteCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([site, count]) => {
+        documentContent += `  ${site}: ${count} shifts\n`;
+      });
+
+    // Download as text file
+    const blob = new Blob([documentContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `complete-schedule-data-${format(currentDate, 'yyyy-MM')}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    
+    alert('Complete schedule data downloaded! This file contains all schedule details and can be used with your Gemini API chatbot.');
   };
 
   // Add keyboard navigation
@@ -416,6 +550,24 @@ const Calendar: React.FC<CalendarProps> = ({
                 onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
               >
                 📅 Export to Google Calendar
+              </button>
+              <button
+                onClick={exportCompleteScheduleData}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  transition: 'background 0.2s',
+                  borderTop: '1px solid #eee'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+              >
+                🤖 Export Complete Data (for AI)
               </button>
             </div>
           )}
