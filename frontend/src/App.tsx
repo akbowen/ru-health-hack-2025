@@ -297,19 +297,20 @@ function App() {
       <header className="App-header">
         <h1>Provider Schedule Calendar</h1>
         <p>View and manage provider schedules across different sites</p>
-        <button className="logout-btn" onClick={handleLogout} style={{ position: 'absolute', top: 20, right: 20 }}>
+        <button className="btn btn-ghost logout-btn" onClick={handleLogout}>
           Logout
         </button>
         <nav className="admin-tabs" style={{ marginTop: 20 }}>
           <button
             onClick={() => setAdminTab('calendar')}
-            style={{ fontWeight: adminTab === 'calendar' ? 'bold' : 'normal', marginRight: 10 }}
+            className={`admin-tab ${adminTab === 'calendar' ? 'admin-tab--active' : ''}`}
+            style={{ marginRight: 0 }}
           >
             Calendar
           </button>
           <button
             onClick={() => setAdminTab('users')}
-            style={{ fontWeight: adminTab === 'users' ? 'bold' : 'normal' }}
+            className={`admin-tab ${adminTab === 'users' ? 'admin-tab--active' : ''}`}
           >
             User Management
           </button>
@@ -327,8 +328,8 @@ function App() {
           />
         ) : (
           <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <button onClick={loadScheduleData}>Reload from database</button>
+            <div className="action-row">
+              <button className="btn btn-outline" onClick={loadScheduleData}>Reload from database</button>
             </div>
             {error && (
               <div className="error-message">
