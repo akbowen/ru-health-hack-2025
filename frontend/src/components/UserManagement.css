@@ -1,41 +1,204 @@
+/* --- Healthcare Light Theme for User Management --- */
+:root {
+  --um-bg: #f7fbff;
+  --um-surface: #ffffff;
+  --um-surface-alt: #f2f8ff;
+  --um-primary: #3aa0ff; /* light medical blue */
+  --um-primary-600: #1f8df2;
+  --um-primary-700: #177bd6;
+  --um-danger: #e85c5c;
+  --um-danger-700: #cf4444;
+  --um-text: #1f2937;
+  --um-text-muted: #6b7280;
+  --um-border: #e5eef7;
+  --um-ring: rgba(58, 160, 255, 0.35);
+  --um-shadow: 0 10px 30px rgba(31, 141, 242, 0.1);
+  --um-shadow-soft: 0 6px 18px rgba(31, 41, 55, 0.08);
+}
+
+/* Page container */
 .user-management {
   margin: 2rem auto;
-  max-width: 700px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 2rem;
+  max-width: 960px;
+  background: var(--um-surface);
+  border-radius: 16px;
+  box-shadow: var(--um-shadow);
+  padding: 1.5rem;
+  border: 1px solid var(--um-border);
 }
-.user-management h2 {
-  margin-bottom: 1.5rem;
+
+/* Title */
+.user-management .um-title {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--um-text);
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-.user-management table {
+.user-management .um-title::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 0.75rem;
+  background: linear-gradient(90deg, var(--um-border), transparent);
+}
+
+/* Table */
+.user-management .um-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: var(--um-shadow-soft);
+  background: var(--um-surface);
 }
-.user-management th, .user-management td {
-  border: 1px solid #eee;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
+
+/* Header */
+.user-management .um-table thead th {
+  background: linear-gradient(180deg, var(--um-surface-alt), var(--um-surface));
+  color: var(--um-text);
+  font-weight: 600;
+  padding: 0.875rem 0.9rem;
+  border-bottom: 1px solid var(--um-border);
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
-.user-management th {
-  background: #f7f7f7;
+
+/* Cells */
+.user-management .um-table td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--um-border);
+  color: var(--um-text);
+  vertical-align: middle;
+  text-align: center;
 }
-.user-management input, .user-management select {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+
+/* Zebra rows */
+.user-management .um-table tbody tr:nth-child(odd) {
+  background: #fafcff;
 }
-.user-management button {
-  margin-right: 0.5rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
-  border: none;
-  background: #3498db;
-  color: #fff;
+
+/* Row hover */
+.user-management .um-table tbody tr:hover {
+  background: #f2f8ff;
+}
+
+/* Inputs */
+.user-management .um-input,
+.user-management .um-select {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--um-border);
+  background: #ffffff;
+  color: var(--um-text);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(31, 41, 55, 0.02);
+}
+.user-management .um-input::placeholder {
+  color: var(--um-text-muted);
+}
+.user-management .um-input:focus,
+.user-management .um-select:focus {
+  border-color: var(--um-primary);
+  box-shadow: 0 0 0 3px var(--um-ring);
+}
+
+/* Buttons (base) */
+.user-management .um-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px; /* pill */
+  border: 1px solid transparent;
   cursor: pointer;
+  font-weight: 600;
+  line-height: 1;
+  transition: transform 0.06s ease, box-shadow 0.2s ease, background 0.2s ease,
+    color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
-.user-management button:last-child {
-  margin-right: 0;
-  background: #e74c3c;
+
+/* Button styles */
+.user-management .um-btn-primary {
+  background: linear-gradient(180deg, var(--um-primary), var(--um-primary-600));
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(31, 141, 242, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.user-management .um-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(31, 141, 242, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.user-management .um-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 12px rgba(31, 141, 242, 0.18);
+}
+
+.user-management .um-btn-danger {
+  background: linear-gradient(180deg, var(--um-danger), var(--um-danger-700));
+  color: #fff;
+  flex-direction: row;
+  margin-top: 3px;
+  box-shadow: 0 8px 18px rgba(207, 68, 68, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.user-management .um-btn-danger:hover {
+  transform: translateY(-1px);
+}
+.user-management .um-btn-danger:active {
+  transform: translateY(0);
+}
+
+.user-management .um-btn-ghost {
+  background: #ffffff;
+  color: var(--um-text);
+  border-color: var(--um-border);
+}
+.user-management .um-btn-ghost:hover {
+  background: #f8fbff;
+  border-color: var(--um-primary);
+  color: var(--um-primary-700);
+  box-shadow: 0 0 0 3px var(--um-ring);
+}
+
+/* Actions cell: little spacing between buttons */
+.user-management td .um-btn + .um-btn {
+  margin-left: 0.5rem;
+}
+
+/* Helper chips for “Not linked” */
+.user-management .um-chip-muted {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: var(--um-text-muted);
+  border: 1px dashed var(--um-border);
+  font-size: 0.86rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 820px) {
+  .user-management {
+    padding: 1rem;
+  }
+  .user-management .um-title {
+    font-size: 1.2rem;
+  }
+  .user-management .um-table td,
+  .user-management .um-table th {
+    padding: 0.6rem 0.7rem;
+  }
 }
