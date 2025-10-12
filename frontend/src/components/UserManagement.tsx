@@ -49,8 +49,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, sites
 
   return (
     <div className="user-management">
-      <h2>User Accounts</h2>
-      <table>
+      <h2 className="um-title">User Accounts</h2>
+      <table className="um-table">
         <thead>
           <tr>
             <th>Username</th>
@@ -65,65 +65,65 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, sites
           {users.map(user => (
             <tr key={user.username}>
               <td>{editing?.username === user.username ? (
-                <input name="username" value={editing.username} onChange={handleEditChange} />
+                <input className="um-input" name="username" value={editing.username} onChange={handleEditChange} />
               ) : user.username}</td>
               <td>{editing?.username === user.username ? (
-                <select name="role" value={editing.role} onChange={handleEditChange}>
+                <select className="um-select" name="role" value={editing.role} onChange={handleEditChange}>
                   <option value="admin">admin</option>
                   <option value="physician">physician</option>
                   <option value="hospital">hospital</option>
                 </select>
               ) : user.role}</td>
               <td>{editing?.username === user.username ? (
-                <input name="password" value={editing.password} onChange={handleEditChange} type="password" />
+                <input className="um-input" name="password" value={editing.password} onChange={handleEditChange} type="password" />
               ) : '••••••'}</td>
               <td>{editing?.username === user.username && editing.role === 'physician' ? (
-                <select name="providerId" value={editing.providerId || ''} onChange={handleEditChange}>
+                <select className="um-select" name="providerId" value={editing.providerId || ''} onChange={handleEditChange}>
                   <option value="">-- Select Provider --</option>
                   {providers.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               ) : user.role === 'physician' ? (
-                providers.find(p => p.id === user.providerId)?.name || <span style={{color:'#aaa'}}>Not linked</span>
+                providers.find(p => p.id === user.providerId)?.name || <span className="um-chip-muted">Not linked</span>
               ) : '-'}</td>
               <td>{editing?.username === user.username && editing.role === 'hospital' ? (
-                <select name="siteId" value={editing.siteId || ''} onChange={handleEditChange}>
+                <select className="um-select" name="siteId" value={editing.siteId || ''} onChange={handleEditChange}>
                   <option value="">-- Select Site --</option>
                   {sites.map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               ) : user.role === 'hospital' ? (
-                sites.find(s => s.id === user.siteId)?.name || <span style={{color:'#aaa'}}>Not linked</span>
+                sites.find(s => s.id === user.siteId)?.name || <span className="um-chip-muted">Not linked</span>
               ) : '-'}</td>
               <td>
                 {editing?.username === user.username ? (
                   <>
-                    <button onClick={handleEditSave}>Save</button>
-                    <button onClick={() => setEditing(null)}>Cancel</button>
+                    <button className="um-btn um-btn-primary" onClick={handleEditSave}>Save</button>
+                    <button className="um-btn um-btn-ghost" onClick={() => setEditing(null)}>Cancel</button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => handleEdit(user)}>Edit</button>
-                    <button onClick={() => onDelete(user.username)}>Delete</button>
+                    <button className="um-btn um-btn-primary" onClick={() => handleEdit(user)}>Edit</button>
+                    <button className="um-btn um-btn-danger" onClick={() => onDelete(user.username)}>Delete</button>
                   </>
                 )}
               </td>
             </tr>
           ))}
           <tr>
-            <td><input name="username" value={newUser.username} onChange={handleAddChange} /></td>
+            <td><input className="um-input" name="username" value={newUser.username} onChange={handleAddChange} /></td>
             <td>
-              <select name="role" value={newUser.role} onChange={handleAddChange}>
+              <select className="um-select" name="role" value={newUser.role} onChange={handleAddChange}>
                 <option value="admin">admin</option>
                 <option value="physician">physician</option>
                 <option value="hospital">hospital</option>
               </select>
             </td>
-            <td><input name="password" value={newUser.password} onChange={handleAddChange} type="password" /></td>
+            <td><input className="um-input" name="password" value={newUser.password} onChange={handleAddChange} type="password" /></td>
             <td>{newUser.role === 'physician' ? (
-              <select name="providerId" value={newUser.providerId || ''} onChange={handleAddChange}>
+              <select className="um-select" name="providerId" value={newUser.providerId || ''} onChange={handleAddChange}>
                 <option value="">-- Select Provider --</option>
                 {providers.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -131,19 +131,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, providers, sites
               </select>
             ) : '-'}</td>
             <td>{newUser.role === 'hospital' ? (
-              <select name="siteId" value={newUser.siteId || ''} onChange={handleAddChange}>
+              <select className="um-select" name="siteId" value={newUser.siteId || ''} onChange={handleAddChange}>
                 <option value="">-- Select Site --</option>
                 {sites.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             ) : '-'}</td>
-            <td><button onClick={handleAdd}>Add</button></td>
+            <td><button className="um-btn um-btn-primary" onClick={handleAdd}>Add</button></td>
           </tr>
         </tbody>
       </table>
     </div>
   );
+
 };
 
 export default UserManagement;

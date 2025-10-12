@@ -1,7 +1,11 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, RequestHandler } from 'express'; // + RequestHandler
 import cors from 'cors';
 import { z } from 'zod';
 import { dbGet, dbAll, dbRun } from './db';
+import multer from 'multer';
+import { runScheduler } from './scheduler';
+import axios from 'axios';
+import FormData from 'form-data';
 
 const app = express();
 app.use(cors());
@@ -190,6 +194,136 @@ app.get('/api/sites', async (req: Request, res: Response) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+
+// Object to save the files
+const memUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB/file
+  fileFilter: (_req, file, cb) => {
+    const okExt = file.originalname.toLowerCase().endsWith('.xlsx');
+    const okMime =
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.mimetype === 'application/octet-stream';
+    if (okExt && okMime) return cb(null, true);
+    cb(new Error('Only .xlsx files are allowed'));
+  },
+});
+
+
+type UploadFields = {
+  providerAvailability?: Express.Multer.File[];
+  providerContract?: Express.Multer.File[];
+  providerCredentialing?: Express.Multer.File[];
+  facilityVolume?: Express.Multer.File[];
+  facilityCoverage?: Express.Multer.File[]
+};
+
+function appendFile(fd: FormData, fieldName: string, f: Express.Multer.File) {
+  // ensure a filename and mimetype go over the wire
+  const filename = f.originalname || `${fieldName}.xlsx`;
+  const contentType = f.mimetype || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  fd.append(fieldName, f.buffer, { filename, contentType });
+}
+
+app.post(
+  '/api/schedule/upload',
+  memUpload.fields([
+    { name: 'providerAvailability', maxCount: 1 },
+    { name: 'providerContract', maxCount: 1 },
+    { name: 'providerCredentialing', maxCount: 1 },
+    { name: 'facilityVolume', maxCount: 1 },
+    { name: 'facilityCoverage', maxCount: 1 },
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      const files = req.files as UploadFields;
+
+      // presence checks
+      const need: (keyof UploadFields)[] = [
+        'providerAvailability',
+        'providerContract',
+        'providerCredentialing',
+        'facilityVolume',
+        'facilityCoverage',
+      ];
+      for (const k of need) {
+        if (!files?.[k]?.[0]?.buffer) {
+          return res.status(400).json({ error: `Missing file for '${k}'` });
+        }
+      }
+
+      // Build multipart form for Flask
+      const fd = new FormData();
+      appendFile(fd, 'providerAvailability', files.providerAvailability![0]);
+      appendFile(fd, 'providerContract', files.providerContract![0]);
+      appendFile(fd, 'providerCredentialing', files.providerCredentialing![0]);
+      appendFile(fd, 'facilityVolume', files.facilityVolume![0]);
+      appendFile(fd, 'facilityCoverage', files.facilityCoverage![0]);
+
+      // POST to Flask; expect an Excel file stream when successful
+      const flaskUrl = 'http://localhost:5051/api/run/scheduler';
+      const flaskResp = await axios.post(flaskUrl, fd, {
+        headers: fd.getHeaders(),
+        responseType: 'stream',            // important: stream the XLSX back
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 15 * 60 * 1000,            // 5 min (adjust as needed)
+        validateStatus: () => true,        // we'll handle status codes below
+      });
+
+      const ct = flaskResp.headers['content-type'] || '';
+      const cd = flaskResp.headers['content-disposition'];
+
+      // If Flask returned an Excel file, stream it through
+      const isExcel =
+        ct.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ||
+        (cd && /filename=.*\.xlsx/i.test(String(cd)));
+
+      if (flaskResp.status >= 200 && flaskResp.status < 300 && isExcel) {
+        // Pass through headers that matter for download
+        if (cd) res.setHeader('Content-Disposition', cd);
+        else res.setHeader('Content-Disposition', 'attachment; filename="rank2.xlsx"');
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+
+        // Pipe the Excel stream to client
+        flaskResp.data.pipe(res);
+        flaskResp.data.on('end', () => {
+          // done
+        });
+        flaskResp.data.on('error', (err: any) => {
+          console.error('Stream error from Flask:', err);
+          if (!res.headersSent) res.status(502).json({ error: 'Upstream stream error' });
+        });
+        return;
+      }
+
+      // Otherwise, try to read JSON/text error payload and forward it
+      // Because responseType:'stream', we need to buffer it if not Excel.
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        flaskResp.data.on('data', (c: Buffer) => chunks.push(c));
+        flaskResp.data.on('end', () => resolve());
+        flaskResp.data.on('error', reject);
+      });
+
+      const bodyStr = Buffer.concat(chunks).toString('utf8');
+      let body: any = bodyStr;
+      try { body = JSON.parse(bodyStr); } catch { /* not JSON; keep as string */ }
+
+      res.status(flaskResp.status || 500).json(
+        typeof body === 'string' ? { error: body } : body
+      );
+    } catch (e: any) {
+      console.error(e);
+      res.status(500).json({ error: e.message || 'Internal error' });
+    }
+  }
+);
+
 
 app.get('/api/schedules', async (req: Request, res: Response) => {
   try {
@@ -389,3 +523,7 @@ const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
 });
+
+
+
+
