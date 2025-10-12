@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Calendar from './Calendar';
 import StatsSummary from './StatsSummary';
-import { ScheduleData, Site } from '../types/schedule';
+import LeaveRequestsList from './LeaveRequestsList';
+import { ScheduleData, Site, LeaveRequest } from './types/schedule';
+import { api } from '../utils/api';
+import './HospitalView.css';
 
 interface HospitalViewProps {
   site: Site;
@@ -10,6 +13,9 @@ interface HospitalViewProps {
 }
 
 const HospitalView: React.FC<HospitalViewProps> = ({ site, scheduleData, onLogout }) => {
+  const [showLeaveRequests, setShowLeaveRequests] = useState(false);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+
   // Filter schedules for this specific site
   const siteSchedules = scheduleData.schedules.filter(s => s.siteId === site.id);
   
@@ -17,16 +23,59 @@ const HospitalView: React.FC<HospitalViewProps> = ({ site, scheduleData, onLogou
   const siteProviderIds = Array.from(new Set(siteSchedules.map(s => s.providerId)));
   const siteProviders = scheduleData.providers.filter(p => siteProviderIds.includes(p.id));
 
+  useEffect(() => {
+    loadLeaveRequests();
+  }, [site.id]);
+
+  const loadLeaveRequests = async () => {
+    try {
+      const requests = await api.getLeaveRequestsBySite(site.id);
+      setLeaveRequests(requests);
+    } catch (error) {
+      console.error('Failed to load leave requests:', error);
+    }
+  };
+
+  const handleApproveRequest = async (requestId: string) => {
+    try {
+      await api.approveLeaveRequest(requestId, site.name);
+      alert('Leave request approved! An availability alert has been created.');
+      loadLeaveRequests();
+      // Reload schedule data
+      window.location.reload();
+    } catch (error: any) {
+      alert('Failed to approve request: ' + error.message);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await api.rejectLeaveRequest(requestId, site.name);
+      alert('Leave request rejected.');
+      loadLeaveRequests();
+    } catch (error: any) {
+      alert('Failed to reject request: ' + error.message);
+    }
+  };
+
+  const pendingCount = leaveRequests.filter(r => r.status === 'pending').length;
+
   return (
     <div className="hospital-view">
       <header>
         <h2>{site.name} - Hospital View</h2>
-        <button className="logout-btn" onClick={onLogout} style={{ position: 'absolute', top: 20, right: 20 }}>
+        <button className="logout-btn" onClick={onLogout}>
           Logout
         </button>
-        <p>View schedules and provider assignments for your site</p>
+        <p>Manage schedules and approve leave requests for your site</p>
       </header>
       
+      <div className="hospital-actions">
+        <button className="action-btn primary" onClick={() => setShowLeaveRequests(true)}>
+          📋 Leave Requests {pendingCount > 0 && `(${pendingCount} pending)`}
+        </button>
+      </div>
+
       <main>
         <StatsSummary
           scheduleData={{
@@ -46,7 +95,7 @@ const HospitalView: React.FC<HospitalViewProps> = ({ site, scheduleData, onLogou
             sites={[site]}
             selectedProvider={undefined}
             selectedSite={site}
-            onDateClick={() => {}} // Hospital view doesn't need date selection
+            onDateClick={() => {}}
           />
         </section>
         
@@ -72,6 +121,16 @@ const HospitalView: React.FC<HospitalViewProps> = ({ site, scheduleData, onLogou
           </div>
         </section>
       </main>
+
+      {showLeaveRequests && (
+        <LeaveRequestsList
+          requests={leaveRequests}
+          userRole="hospital"
+          onApprove={handleApproveRequest}
+          onReject={handleRejectRequest}
+          onClose={() => setShowLeaveRequests(false)}
+        />
+      )}
     </div>
   );
 };

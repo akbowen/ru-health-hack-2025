@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScheduleData } from '../types/schedule';
+import { ScheduleData } from './types/schedule';
 import './StatsSummary.css';
 
 interface StatsSummaryProps {

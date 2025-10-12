@@ -1,0 +1,50 @@
+# Node modules
+schedule-calendar/node_modules/
+schedule-calendar/npm-debug.log*
+schedule-calendar/yarn-debug.log*
+schedule-calendar/yarn-error.log*
+
+# Build output
+schedule-calendar/build/
+schedule-calendar/dist/
+schedule-calendar/coverage/
+
+# Local env files
+.env
+.env.*
+
+# Mac system files
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# Excel and data files (if you don't want to track sample-data uploads)
+# sample-data/*.xlsx
+# sample-data/*.csv
+
+# React specific
+*.local
+*.cache
+
+# Misc
+*.log
+
+# Ignore the SQLite database file
+data.sqlite
+
+# Ignore Node modules
+node_modules/
+
+# Ignore logs and temp files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Ignore build artifacts (if any)
+dist/
+build/
+
+backend/package-lock.json
+frontend/package-lock.json

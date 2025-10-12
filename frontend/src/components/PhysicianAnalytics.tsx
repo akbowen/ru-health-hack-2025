@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Provider } from '../types/schedule';
+import { Provider } from './types/schedule';
 import { api, ShiftCount, VolumeData, ComplianceReport } from '../utils/api';
 import PhysicianSatisfaction from './PhysicianSatisfaction';
 import './PhysicianAnalytics.css';

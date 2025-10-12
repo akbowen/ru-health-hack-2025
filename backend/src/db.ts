@@ -43,7 +43,34 @@ CREATE TABLE IF NOT EXISTS physician_satisfaction (
   happiness_rating INTEGER NOT NULL CHECK(happiness_rating >= 1 AND happiness_rating <= 10),
   feedback TEXT,
   updated_at TEXT NOT NULL,
-  FOREIGN KEY(username) REFERENCES users(username)
+  FOREIGN KEY(username) REFERENCES users(username));
+  
+CREATE TABLE IF NOT EXISTS leave_requests (
+  id TEXT PRIMARY KEY,
+  physicianId TEXT NOT NULL,
+  physicianName TEXT NOT NULL,
+  date TEXT NOT NULL,
+  shiftType TEXT NOT NULL,
+  siteId TEXT NOT NULL,
+  siteName TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending','approved','rejected')),
+  createdAt TEXT NOT NULL,
+  respondedAt TEXT,
+  respondedBy TEXT
+);
+
+CREATE TABLE IF NOT EXISTS availability_alerts (
+  id TEXT PRIMARY KEY,
+  siteId TEXT NOT NULL,
+  siteName TEXT NOT NULL,
+  date TEXT NOT NULL,
+  shiftType TEXT NOT NULL,
+  originalPhysicianName TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('open','filled')),
+  filledBy TEXT,
+  filledByName TEXT
 );
 `;
 

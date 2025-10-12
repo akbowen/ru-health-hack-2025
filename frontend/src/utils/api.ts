@@ -96,8 +96,6 @@ export interface ComplianceReport {
   Weekend_Remaining: number | string;
 }
 
-
-
 export interface ReplacementProvider {
   rank: number;
   provider_name: string;
@@ -105,87 +103,117 @@ export interface ReplacementProvider {
   volume: number;
 }
 
-async function request(path: string, options?: RequestInit) {
+/**
+ * Generic request helper.
+ * - Automatically sets JSON headers unless body is FormData.
+ * - Parses JSON/text based on response content-type.
+ * - Throws with server-provided error text when available.
+ */
+async function request<T = any>(path: string, options?: RequestInit): Promise<T> {
+  const isFormData = options?.body instanceof FormData;
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    // Only set JSON headers when NOT sending FormData
+    headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
     ...options,
   });
-  
-  const contentType = res.headers.get('content-type');
-  const isJson = contentType && contentType.includes('application/json');
-  
+
+  const contentType = res.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
   if (!res.ok) {
-    let errText: any;
-    try { 
-      if (isJson) {
-        errText = await res.json();
-      } else {
-        errText = await res.text();
-      }
+    let errPayload: any;
+    try {
+      errPayload = isJson ? await res.json() : await res.text();
     } catch {
-      errText = 'Request failed';
+      errPayload = 'Request failed';
     }
-    throw new Error(typeof errText === 'string' ? errText : errText?.error || 'Request failed');
+    throw new Error(
+      typeof errPayload === 'string' ? errPayload : errPayload?.error || 'Request failed'
+    );
   }
-  
-  if (isJson) {
-    return res.json();
-  }
-  return res.text();
+
+  return (isJson ? res.json() : res.text()) as Promise<T>;
 }
 
 export const api = {
   // Auth
   login: async (username: string, password: string): Promise<ApiUser> => {
-    return request('/api/login', {
+    return request<ApiUser>('/api/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
   },
 
   // Users
-  getUsers: async (): Promise<ApiUser[]> => request('/api/users'),
+  getUsers: async (): Promise<ApiUser[]> => request<ApiUser[]>('/api/users'),
   createUser: async (user: CreateUserInput): Promise<{ ok: true }> =>
     request('/api/users', { method: 'POST', body: JSON.stringify(user) }),
   updateUser: async (username: string, update: UpdateUserInput): Promise<{ ok: true }> =>
-    request(`/api/users/${encodeURIComponent(username)}`, { method: 'PUT', body: JSON.stringify(update) }),
+    request(`/api/users/${encodeURIComponent(username)}`, {
+      method: 'PUT',
+      body: JSON.stringify(update),
+    }),
   deleteUser: async (username: string): Promise<{ ok: true }> =>
     request(`/api/users/${encodeURIComponent(username)}`, { method: 'DELETE' }),
 
   // Schedule data GET endpoints
-  getProviders: async (): Promise<Array<{ id: string; name: string }>> => 
+  getProviders: async (): Promise<Array<{ id: string; name: string }>> =>
     request('/api/providers'),
-  getSites: async (): Promise<Array<{ id: string; name: string }>> => 
+  getSites: async (): Promise<Array<{ id: string; name: string }>> =>
     request('/api/sites'),
-  getSchedules: async (): Promise<Array<{ id: string; providerId: string; siteId: string; date: string; startTime: string; endTime: string; status: string; notes?: string }>> => 
-    request('/api/schedules'),
+  getSchedules: async (): Promise<
+    Array<{
+      id: string;
+      providerId: string;
+      siteId: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      status: string;
+      notes?: string;
+    }>
+  > => request('/api/schedules'),
 
   // Bulk upload endpoints
   bulkProviders: async (rows: Array<{ id: string; name: string }>) =>
     request('/api/providers/bulk', { method: 'POST', body: JSON.stringify(rows) }),
   bulkSites: async (rows: Array<{ id: string; name: string }>) =>
     request('/api/sites/bulk', { method: 'POST', body: JSON.stringify(rows) }),
-  bulkSchedules: async (rows: Array<{ id: string; providerId: string; siteId: string; date: string; startTime: string; endTime: string; status: string; notes?: string }>) =>
-    request('/api/schedules/bulk', { method: 'POST', body: JSON.stringify(rows) }),
+  bulkSchedules: async (
+    rows: Array<{
+      id: string;
+      providerId: string;
+      siteId: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      status: string;
+      notes?: string;
+    }>
+  ) => request('/api/schedules/bulk', { method: 'POST', body: JSON.stringify(rows) }),
   resetSchedule: async (): Promise<{ ok: true }> =>
     request('/api/schedule/reset', { method: 'POST' }),
 
   // Analytics endpoints
-  getShiftCounts: async (): Promise<ShiftCount[]> => 
-    request('/api/analysis/shift-counts'),
-  
-  getVolumes: async (): Promise<VolumeData[]> => 
-    request('/api/analysis/volumes'),
-  
-  getCompliance: async (): Promise<ComplianceReport[]> => 
-    request('/api/analysis/compliance'),
-  
-  findReplacements: async (facilityCode: string, shiftType: 'MD1' | 'MD2' | 'PM', cancelDate: string): Promise<ReplacementProvider[]> =>
-    request('/api/analysis/find-replacements', {
+  getShiftCounts: async (): Promise<ShiftCount[]> =>
+    request<ShiftCount[]>('/api/analysis/shift-counts'),
+
+  getVolumes: async (): Promise<VolumeData[]> =>
+    request<VolumeData[]>('/api/analysis/volumes'),
+
+  getCompliance: async (): Promise<ComplianceReport[]> =>
+    request<ComplianceReport[]>('/api/analysis/compliance'),
+
+  findReplacements: async (
+    facilityCode: string,
+    shiftType: 'MD1' | 'MD2' | 'PM',
+    cancelDate: string
+  ): Promise<ReplacementProvider[]> =>
+    request<ReplacementProvider[]>('/api/analysis/find-replacements', {
       method: 'POST',
-      body: JSON.stringify({ facilityCode, shiftType, cancelDate })
+      body: JSON.stringify({ facilityCode, shiftType, cancelDate }),
     }),
-  
+
   uploadAnalysisFiles: async (files: {
     scheduleFile?: File;
     volumeFile?: File;
@@ -197,12 +225,13 @@ export const api = {
     if (files.volumeFile) formData.append('volumeFile', files.volumeFile);
     if (files.contractFile) formData.append('contractFile', files.contractFile);
     if (files.credentialingFile) formData.append('credentialingFile', files.credentialingFile);
-    
+
+    // Use raw fetch so the helper doesn't inject JSON headers
     const res = await fetch(`${BASE_URL}/api/analysis/upload-files`, {
       method: 'POST',
-      body: formData
+      body: formData,
     });
-    
+
     if (!res.ok) {
       let error: any;
       try {
@@ -212,17 +241,88 @@ export const api = {
       }
       throw new Error(typeof error === 'string' ? error : error?.error || 'Upload failed');
     }
-    
+
     return res.json();
   },
 
   // Satisfaction endpoints
   getSatisfaction: async (username: string): Promise<SatisfactionData> =>
-    request(`/api/analysis/satisfaction/${encodeURIComponent(username)}`),
-  
-  updateHappinessRating: async (username: string, rating: number, feedback?: string): Promise<{ ok: true }> =>
+    request<SatisfactionData>(`/api/analysis/satisfaction/${encodeURIComponent(username)}`),
+
+  updateHappinessRating: async (
+    username: string,
+    rating: number,
+    feedback?: string
+  ): Promise<{ ok: true }> =>
     request('/api/physician-satisfaction', {
       method: 'POST',
-      body: JSON.stringify({ username, happiness_rating: rating, feedback })
-    })
+      body: JSON.stringify({ username, happiness_rating: rating, feedback }),
+    }),
+
+  // Leave Requests API
+  getLeaveRequests: async (physicianId?: string) => {
+    const url = physicianId
+      ? `/api/leave-requests?physicianId=${encodeURIComponent(physicianId)}`
+      : '/api/leave-requests';
+    return request(url);
+  },
+
+  getLeaveRequestsBySite: async (siteId: string) => {
+    return request(`/api/leave-requests?siteId=${encodeURIComponent(siteId)}`);
+  },
+
+  createLeaveRequest: async (leaveRequest: {
+    physicianId: string;
+    physicianName: string;
+    date: string;
+    shiftType: string;
+    siteId: string;
+    siteName: string;
+    reason: string;
+  }) => {
+    return request('/api/leave-requests', {
+      method: 'POST',
+      body: JSON.stringify(leaveRequest),
+    });
+  },
+
+  approveLeaveRequest: async (requestId: string, respondedBy: string) => {
+    return request(`/api/leave-requests/${encodeURIComponent(requestId)}/approve`, {
+      method: 'PUT',
+      body: JSON.stringify({ respondedBy }),
+    });
+  },
+
+  rejectLeaveRequest: async (requestId: string, respondedBy: string) => {
+    return request(`/api/leave-requests/${encodeURIComponent(requestId)}/reject`, {
+      method: 'PUT',
+      body: JSON.stringify({ respondedBy }),
+    });
+  },
+
+  deleteLeaveRequest: async (requestId: string) => {
+    return request(`/api/leave-requests/${encodeURIComponent(requestId)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Availability Alerts API
+  getAvailabilityAlerts: async (siteId?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (siteId) params.set('siteId', siteId);
+    if (status) params.set('status', status);
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return request(`/api/availability-alerts${suffix}`);
+  },
+
+  claimAvailableShift: async (
+    alertId: string,
+    physicianId: string,
+    physicianName: string
+  ) => {
+    return request(`/api/availability-alerts/${encodeURIComponent(alertId)}/claim`, {
+      method: 'POST',
+      body: JSON.stringify({ physicianId, physicianName }),
+    });
+  },
 };
