@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, getDay } from 'date-fns';
 import { ScheduleEntry, Provider, Site } from '../types/schedule';
 import './Calendar.css';
@@ -21,6 +21,169 @@ const Calendar: React.FC<CalendarProps> = ({
   onDateClick
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
+
+  // PDF Export function
+  const exportToPDF = async () => {
+    if (!calendarRef.current) return;
+    
+    setIsExporting(true);
+    setShowExportMenu(false);
+    
+    try {
+      // Dynamically import libraries
+      const html2canvas = (await import('html2canvas')).default;
+      const jsPDF = (await import('jspdf')).default;
+      
+      // Capture the calendar as canvas
+      const canvas = await html2canvas(calendarRef.current, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Calculate PDF dimensions
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Generate filename
+      const filename = `schedule-${format(currentDate, 'yyyy-MM')}.pdf`;
+      pdf.save(filename);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Google Calendar Export function (only for physicians)
+  const exportToGoogleCalendar = () => {
+    setShowExportMenu(false);
+    
+    // Get all schedules for the current month
+    const monthSchedules = filteredSchedules.filter(schedule => {
+      const scheduleMonth = schedule.date.getMonth();
+      const scheduleYear = schedule.date.getFullYear();
+      return scheduleMonth === currentDate.getMonth() && scheduleYear === currentDate.getFullYear();
+    });
+
+    if (monthSchedules.length === 0) {
+      alert('No schedules found for this month.');
+      return;
+    }
+
+    // Create ICS file content
+    const icsContent = generateICSFile(monthSchedules);
+    
+    // Download ICS file
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `schedule-${format(currentDate, 'yyyy-MM')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    
+    alert('Calendar file downloaded! Import it to Google Calendar:\n1. Open Google Calendar\n2. Click Settings (gear icon) → Settings\n3. Click "Import & Export" on the left\n4. Click "Select file from your computer"\n5. Choose the downloaded .ics file');
+  };
+
+  // Generate ICS file format
+  const generateICSFile = (schedules: ScheduleEntry[]) => {
+    const formatICSDate = (date: Date, time?: string) => {
+      // Default times for different shift types
+      const shiftTimes: { [key: string]: { start: string, end: string } } = {
+        'MD1': { start: '08:00', end: '12:00' },
+        'MD2': { start: '13:00', end: '17:00' },
+        'PM': { start: '09:00', end: '17:00' }
+      };
+      
+      const [hours, minutes] = (time && shiftTimes[time]?.start || '08:00').split(':');
+      const startDate = new Date(date);
+      startDate.setHours(parseInt(hours), parseInt(minutes), 0);
+      
+      return startDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const formatICSEndDate = (date: Date, time?: string) => {
+      const shiftTimes: { [key: string]: { start: string, end: string } } = {
+        'MD1': { start: '08:00', end: '12:00' },
+        'MD2': { start: '13:00', end: '17:00' },
+        'PM': { start: '09:00', end: '17:00' }
+      };
+      
+      const [hours, minutes] = (time && shiftTimes[time]?.end || '17:00').split(':');
+      const endDate = new Date(date);
+      endDate.setHours(parseInt(hours), parseInt(minutes), 0);
+      
+      return endDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    let icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Schedule Calendar//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH'
+    ];
+
+    schedules.forEach(schedule => {
+      const providerName = getProviderName(schedule.providerId);
+      const siteName = getSiteName(schedule.siteId);
+      const uid = `${schedule.id}@schedulecalendar.com`;
+      
+      icsContent.push(
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${formatICSDate(new Date())}`,
+        `DTSTART:${formatICSDate(schedule.date, schedule.startTime)}`,
+        `DTEND:${formatICSEndDate(schedule.date, schedule.startTime)}`,
+        `SUMMARY:${schedule.startTime} - ${providerName} at ${siteName}`,
+        `DESCRIPTION:Provider: ${providerName}\\nSite: ${siteName}\\nShift: ${schedule.startTime}\\nStatus: ${schedule.status}`,
+        `LOCATION:${siteName}`,
+        `STATUS:${schedule.status === 'confirmed' ? 'CONFIRMED' : 'TENTATIVE'}`,
+        'END:VEVENT'
+      );
+    });
+
+    icsContent.push('END:VCALENDAR');
+    
+    return icsContent.join('\r\n');
+  };
 
   // Add keyboard navigation
   useEffect(() => {
@@ -67,12 +230,9 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  // Days within the month only
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  // Number of blanks before the 1st to align with weekday header (0=Sun..6=Sat)
   const leadingBlanksCount = getDay(monthStart);
   const leadingBlanks = Array.from({ length: leadingBlanksCount }, () => null as Date | null);
-  // Trailing blanks to complete the last week row
   const totalCells = leadingBlanksCount + monthDays.length;
   const trailingBlanksCount = (7 - (totalCells % 7)) % 7;
   const trailingBlanks = Array.from({ length: trailingBlanksCount }, () => null as Date | null);
@@ -81,13 +241,11 @@ const Calendar: React.FC<CalendarProps> = ({
   const getSchedulesForDate = (date: Date) => {
     const daySchedules = filteredSchedules.filter(schedule => isSameDay(schedule.date, date));
     
-    // If a specific site is selected, show individual entries
     if (selectedSite) {
-      // Sort schedules by shift type in chronological order: MD1 → MD2 → PM
       const shiftOrder: { [key: string]: number } = {
-        'MD1': 1,   // First shift
-        'MD2': 2,   // Second shift  
-        'PM': 3     // Practice Management (last)
+        'MD1': 1,
+        'MD2': 2,
+        'PM': 3
       };
       
       return daySchedules.sort((a, b) => {
@@ -98,14 +256,12 @@ const Calendar: React.FC<CalendarProps> = ({
           return orderA - orderB;
         }
         
-        // If same shift type, sort by provider name
         const providerA = getProviderName(a.providerId);
         const providerB = getProviderName(b.providerId);
         return providerA.localeCompare(providerB);
       });
     }
     
-    // If "All Sites" is selected, group by provider and shift
     const groupedSchedules = new Map<string, {
       providerId: string;
       startTime: string;
@@ -135,23 +291,21 @@ const Calendar: React.FC<CalendarProps> = ({
       }
     });
     
-    // Convert grouped data back to schedule-like objects and sort
     const combinedSchedules = Array.from(groupedSchedules.values()).map(group => ({
       id: group.scheduleIds.join('-'),
       providerId: group.providerId,
-      siteId: 'combined', // Special marker for combined entries
+      siteId: 'combined',
       date: date,
       startTime: group.startTime,
       endTime: '',
       status: group.status,
-      sites: group.sites // Add sites array for combined display
+      sites: group.sites
     }));
     
-    // Sort by shift type
     const shiftOrder: { [key: string]: number } = {
-      'MD1': 1,   // First shift
-      'MD2': 2,   // Second shift  
-      'PM': 3     // Practice Management (last)
+      'MD1': 1,
+      'MD2': 2,
+      'PM': 3
     };
     
     return combinedSchedules.sort((a, b) => {
@@ -162,7 +316,6 @@ const Calendar: React.FC<CalendarProps> = ({
         return orderA - orderB;
       }
       
-      // If same shift type, sort by provider name
       const providerA = getProviderName(a.providerId);
       const providerB = getProviderName(b.providerId);
       return providerA.localeCompare(providerB);
@@ -196,7 +349,7 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   return (
-    <div className="calendar">
+    <div className="calendar" ref={calendarRef}>
       <div className="calendar-header">
         <button onClick={() => navigateMonth('prev')} className="nav-button">
           ← Previous
@@ -207,9 +360,66 @@ const Calendar: React.FC<CalendarProps> = ({
         <button onClick={() => navigateMonth('next')} className="nav-button">
           Next →
         </button>
-        <button onClick={goToToday} className="today-button">
-          Today
-        </button>
+        <div style={{ position: 'relative' }} ref={menuRef}>
+          <button 
+            onClick={() => setShowExportMenu(!showExportMenu)} 
+            className="today-button"
+            disabled={isExporting}
+          >
+            {isExporting ? 'Generating PDF...' : 'Export ▼'}
+          </button>
+          {showExportMenu && (
+            <div style={{
+              position: 'absolute',
+              right: 0,
+              top: '100%',
+              marginTop: '8px',
+              backgroundColor: 'white',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              zIndex: 1000,
+              minWidth: '200px',
+              overflow: 'hidden'
+            }}>
+              <button
+                onClick={exportToPDF}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+              >
+                📄 Download as PDF
+              </button>
+              <button
+                onClick={exportToGoogleCalendar}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'white',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  transition: 'background 0.2s',
+                  borderTop: '1px solid #eee'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+              >
+                📅 Export to Google Calendar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="calendar-weekdays">
