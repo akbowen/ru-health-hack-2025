@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import Calendar from './Calendar';
 import PhysicianAnalytics from './PhysicianAnalytics';
+import ScheduleChatbot from './ScheduleChatbot';
 import { ScheduleData, Provider } from '../types/schedule';
 
 interface PhysicianViewProps {
   provider: Provider;
   scheduleData: ScheduleData;
-  username: string; // Add username prop
+  username: string;
   onLogout: () => void;
 }
 
@@ -55,6 +56,9 @@ const PhysicianView: React.FC<PhysicianViewProps> = ({ provider, scheduleData, u
       ) : (
         <PhysicianAnalytics provider={provider} username={username} />
       )}
+
+      {/* Add Chatbot */}
+      <ScheduleChatbot username={username} />
     </div>
   );
 };

@@ -534,6 +534,150 @@ app.get('/api/analysis/satisfaction/:username', async (req: Request, res: Respon
   }
 });
 
+// Chatbot endpoint - query schedule data
+app.post('/api/chatbot/query', async (req: Request, res: Response) => {
+  try {
+    const { question, username } = req.body;
+    
+    if (!question || !username) {
+      return res.status(400).json({ error: 'Question and username required' });
+    }
+
+    // Get user's provider info
+    const user = await dbGet('SELECT username, providerId FROM users WHERE username=?', [username]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const provider = await dbGet('SELECT name FROM providers WHERE id=?', [user.providerId]);
+    const providerName = provider?.name || username;
+
+    // Get all schedules for this provider
+    const schedules = await dbAll(
+      `SELECT s.*, p.name as provider_name, si.name as site_name 
+       FROM schedules s
+       JOIN providers p ON s.providerId = p.id
+       JOIN sites si ON s.siteId = si.id
+       WHERE p.name = ?
+       ORDER BY s.date, s.startTime`,
+      [providerName]
+    );
+
+    // Simple keyword matching
+    const lowerQuestion = question.toLowerCase();
+    let answer = '';
+
+    // Pattern matching for common questions
+    if (lowerQuestion.includes('how many') && lowerQuestion.includes('shift')) {
+      const totalShifts = schedules.length;
+      const md1Count = schedules.filter((s: any) => s.startTime === 'MD1').length;
+      const md2Count = schedules.filter((s: any) => s.startTime === 'MD2').length;
+      const pmCount = schedules.filter((s: any) => s.startTime === 'PM').length;
+      
+      answer = `You have **${totalShifts} total shifts** this month:\n- MD1: ${md1Count} shifts\n- MD2: ${md2Count} shifts\n- PM: ${pmCount} shifts`;
+    }
+    else if (lowerQuestion.includes('where') && (lowerQuestion.includes('work') || lowerQuestion.includes('scheduled'))) {
+      const sites = [...new Set(schedules.map((s: any) => s.site_name))];
+      answer = `You are scheduled at **${sites.length} different sites**:\n${sites.map(s => `- ${s}`).join('\n')}`;
+    }
+    else if (lowerQuestion.includes('weekend')) {
+      const weekends = schedules.filter((s: any) => {
+        const date = new Date(s.date);
+        const day = date.getDay();
+        return day === 0 || day === 6;
+      });
+      answer = `You have **${weekends.length} weekend shifts** scheduled this month.`;
+    }
+    else if (lowerQuestion.includes('next shift') || lowerQuestion.includes('upcoming')) {
+      const today = new Date();
+      const upcoming = schedules.filter((s: any) => new Date(s.date) >= today).slice(0, 5);
+      
+      if (upcoming.length === 0) {
+        answer = 'You have no upcoming shifts scheduled.';
+      } else {
+        answer = `Your next shifts are:\n${upcoming.map((s: any) => 
+          `- ${new Date(s.date).toLocaleDateString()}: ${s.startTime} at ${s.site_name}`
+        ).join('\n')}`;
+      }
+    }
+    else if (lowerQuestion.includes('october') || lowerQuestion.match(/\d{1,2}/)) {
+      // Date-specific query
+      const dateMatch = lowerQuestion.match(/(\d{1,2})/);
+      if (dateMatch) {
+        const day = parseInt(dateMatch[1]);
+        const daySchedules = schedules.filter((s: any) => {
+          const date = new Date(s.date);
+          return date.getDate() === day;
+        });
+        
+        if (daySchedules.length === 0) {
+          answer = `You have no shifts on October ${day}.`;
+        } else {
+          answer = `On October ${day}, you have **${daySchedules.length} shift(s)**:\n${daySchedules.map((s: any) => 
+            `- ${s.startTime} at ${s.site_name}`
+          ).join('\n')}`;
+        }
+      }
+    }
+    else if (lowerQuestion.includes('busiest') || lowerQuestion.includes('most shifts')) {
+      const siteCounts = schedules.reduce((acc: any, s: any) => {
+        acc[s.site_name] = (acc[s.site_name] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const busiest = Object.entries(siteCounts)
+        .sort(([,a]: any, [,b]: any) => b - a)
+        .slice(0, 3);
+      
+      answer = `Your top 3 busiest sites:\n${busiest.map(([site, count]) => 
+        `- ${site}: ${count} shifts`
+      ).join('\n')}`;
+    }
+    else if (lowerQuestion.includes('consecutive') || lowerQuestion.includes('days in a row')) {
+      // Find consecutive working days
+      const dates = [...new Set(schedules.map((s: any) => s.date))].sort();
+      let maxConsecutive = 1;
+      let current = 1;
+      
+      for (let i = 1; i < dates.length; i++) {
+        const prev = new Date(dates[i - 1]);
+        const curr = new Date(dates[i]);
+        const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          current++;
+          maxConsecutive = Math.max(maxConsecutive, current);
+        } else {
+          current = 1;
+        }
+      }
+      
+      answer = `Your longest consecutive work period is **${maxConsecutive} days** in a row.`;
+    }
+    else if (lowerQuestion.includes('day off') || lowerQuestion.includes('free day')) {
+      const workDays = new Set(schedules.map((s: any) => new Date(s.date).getDate()));
+      const daysInMonth = 31; // October
+      const freeDays = [];
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        if (!workDays.has(day)) {
+          freeDays.push(day);
+        }
+      }
+      
+      answer = `You have **${freeDays.length} days off** in October: ${freeDays.join(', ')}`;
+    }
+    else {
+      answer = "I'm not sure how to answer that. Try asking:\n- How many shifts do I have?\n- Where am I working?\n- What are my weekend shifts?\n- When is my next shift?";
+    }
+
+    res.json({ answer, context: { totalShifts: schedules.length } });
+  } catch (e: any) {
+    console.error('Chatbot query error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/analysis/consecutive-shifts/:providerName', async (req: Request, res: Response) => {
   try {
     const { providerName } = req.params;
