@@ -67,7 +67,7 @@ const PhysicianAnalytics: React.FC<PhysicianAnalyticsProps> = ({ provider, usern
   return (
     <div className="physician-analytics">
       <div className="analytics-header">
-        <h2>My Analytics</h2>
+        <h2>Detailed Analytics</h2>
         <button onClick={loadAnalytics} className="refresh-btn">
           Refresh
         </button>
