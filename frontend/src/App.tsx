@@ -297,7 +297,7 @@ function App() {
       <header className="App-header">
         <h1>Provider Schedule Calendar</h1>
         <p>View and manage provider schedules across different sites</p>
-        <button className="btn btn-ghost logout-btn" onClick={handleLogout}>
+        <button className="logout-btn" onClick={handleLogout}>
           Logout
         </button>
         <nav className="admin-tabs" style={{ marginTop: 20 }}>

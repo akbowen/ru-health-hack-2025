@@ -189,7 +189,7 @@ button {
 .action-row{
   display: flex;
   gap: 10px;
-  margin: 0 0 14px 0;
+  margin: 50px 0 14px 0;
 }
 
 /* Physician debug banner */

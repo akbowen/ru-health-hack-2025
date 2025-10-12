@@ -21,33 +21,34 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
-  return (
-    <div className="login-container">
-      <form className="login-form" onSubmit={handleSubmit}>
-        <h2>Login</h2>
-        {error && <div className="login-error">{error}</div>}
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          autoFocus
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-        <button type="submit">Login</button>
-        <div className="login-hint">
-          <div>Admin: <b>admin/admin123</b></div>
-          <div>Physician: <b>physician/physician123</b></div>
-        </div>
-      </form>
-    </div>
-  );
+return (
+  <div className="login-page">
+    <form className="login-card" onSubmit={handleSubmit}>
+      <h2 className="title">Login</h2>
+      {error && <div className="alert alert-error login-error">{error}</div>}
+      <input
+        className="input"
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={e => setUsername(e.target.value)}
+        autoFocus
+      />
+      <input
+        className="input"
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+      />
+      <button className="btn btn-primary" type="submit">Login</button>
+      <div className="muted-hint">
+        <div>Admin: <b>admin/admin123</b></div>
+        <div>Physician: <b>physician/physician123</b></div>
+      </div>
+    </form>
+  </div>
+);
 };
 
 export default Login;
-
