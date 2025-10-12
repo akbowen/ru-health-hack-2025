@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { dbGet, dbAll, dbRun } from './db';
 import multer from 'multer';
 import { runScheduler } from './scheduler';
+import axios from 'axios';
+import FormData from 'form-data';
 
 const app = express();
 app.use(cors());
@@ -188,6 +190,13 @@ type UploadFields = {
   facilityCoverage?: Express.Multer.File[]
 };
 
+function appendFile(fd: FormData, fieldName: string, f: Express.Multer.File) {
+  // ensure a filename and mimetype go over the wire
+  const filename = f.originalname || `${fieldName}.xlsx`;
+  const contentType = f.mimetype || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  fd.append(fieldName, f.buffer, { filename, contentType });
+}
+
 app.post(
   '/api/schedule/upload',
   memUpload.fields([
@@ -207,7 +216,7 @@ app.post(
         'providerContract',
         'providerCredentialing',
         'facilityVolume',
-        'facilityCoverage'
+        'facilityCoverage',
       ];
       for (const k of need) {
         if (!files?.[k]?.[0]?.buffer) {
@@ -215,20 +224,73 @@ app.post(
         }
       }
 
-      // Run your Node scheduler logic
-      const out = runScheduler({
-        availabilityXlsx: files.providerAvailability![0].buffer,
-        contractXlsx: files.providerContract![0].buffer,
-        credentialingXlsx: files.providerCredentialing![0].buffer,
-        volumeXlsx: files.facilityVolume![0].buffer,
-        coverageXlsx: files.facilityCoverage![0].buffer,
+      // Build multipart form for Flask
+      const fd = new FormData();
+      appendFile(fd, 'providerAvailability', files.providerAvailability![0]);
+      appendFile(fd, 'providerContract', files.providerContract![0]);
+      appendFile(fd, 'providerCredentialing', files.providerCredentialing![0]);
+      appendFile(fd, 'facilityVolume', files.facilityVolume![0]);
+      appendFile(fd, 'facilityCoverage', files.facilityCoverage![0]);
+
+      // POST to Flask; expect an Excel file stream when successful
+      const flaskUrl = 'http://localhost:5051/api/run/scheduler';
+      const flaskResp = await axios.post(flaskUrl, fd, {
+        headers: fd.getHeaders(),
+        responseType: 'stream',            // important: stream the XLSX back
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 15 * 60 * 1000,            // 5 min (adjust as needed)
+        validateStatus: () => true,        // we'll handle status codes below
       });
 
-      res.json({
-        ok: true
+      const ct = flaskResp.headers['content-type'] || '';
+      const cd = flaskResp.headers['content-disposition'];
+
+      // If Flask returned an Excel file, stream it through
+      const isExcel =
+        ct.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') ||
+        (cd && /filename=.*\.xlsx/i.test(String(cd)));
+
+      if (flaskResp.status >= 200 && flaskResp.status < 300 && isExcel) {
+        // Pass through headers that matter for download
+        if (cd) res.setHeader('Content-Disposition', cd);
+        else res.setHeader('Content-Disposition', 'attachment; filename="rank2.xlsx"');
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+
+        // Pipe the Excel stream to client
+        flaskResp.data.pipe(res);
+        flaskResp.data.on('end', () => {
+          // done
+        });
+        flaskResp.data.on('error', (err: any) => {
+          console.error('Stream error from Flask:', err);
+          if (!res.headersSent) res.status(502).json({ error: 'Upstream stream error' });
+        });
+        return;
+      }
+
+      // Otherwise, try to read JSON/text error payload and forward it
+      // Because responseType:'stream', we need to buffer it if not Excel.
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        flaskResp.data.on('data', (c: Buffer) => chunks.push(c));
+        flaskResp.data.on('end', () => resolve());
+        flaskResp.data.on('error', reject);
       });
+
+      const bodyStr = Buffer.concat(chunks).toString('utf8');
+      let body: any = bodyStr;
+      try { body = JSON.parse(bodyStr); } catch { /* not JSON; keep as string */ }
+
+      res.status(flaskResp.status || 500).json(
+        typeof body === 'string' ? { error: body } : body
+      );
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      console.error(e);
+      res.status(500).json({ error: e.message || 'Internal error' });
     }
   }
 );
