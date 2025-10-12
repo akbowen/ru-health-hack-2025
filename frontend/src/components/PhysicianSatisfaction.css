@@ -1,0 +1,427 @@
+.physician-satisfaction {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.physician-satisfaction h2 {
+  margin: 0 0 30px 0;
+  color: #111827;
+  font-size: 28px;
+}
+
+.satisfaction-loading,
+.satisfaction-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Overall Score Card */
+.overall-score-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 40px;
+  border-radius: 16px;
+  text-align: center;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.overall-score-card h3 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+.score-circle {
+  width: 180px;
+  height: 180px;
+  border: 8px solid white;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-number {
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.score-max {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.score-label {
+  font-size: 24px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Consecutive Shifts Card */
+.consecutive-shifts-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.consecutive-shifts-card h3 {
+  margin: 0 0 20px 0;
+  color: #111827;
+  font-size: 20px;
+}
+
+.consecutive-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #111827;
+  font-size: 18px;
+}
+
+.consecutive-groups h4 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 16px;
+}
+
+.consecutive-groups ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.consecutive-groups li {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-dates {
+  font-weight: 500;
+  color: #92400e;
+}
+
+.group-count {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.group-count.warning {
+  color: #dc2626;
+}
+
+/* Satisfaction Breakdown */
+.satisfaction-breakdown {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.satisfaction-breakdown h3 {
+  margin: 0 0 24px 0;
+  color: #111827;
+  font-size: 20px;
+}
+
+.breakdown-item {
+  margin-bottom: 20px;
+}
+
+.breakdown-item:last-child {
+  margin-bottom: 0;
+}
+
+.breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.breakdown-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 15px;
+}
+
+.breakdown-score {
+  font-weight: 700;
+  color: #111827;
+  font-size: 16px;
+}
+
+.breakdown-bar-container {
+  height: 24px;
+  background: #f3f4f6;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.breakdown-bar {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.breakdown-weight {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+/* Happiness Rating Card */
+.happiness-rating-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 30px;
+}
+
+.happiness-rating-card h3 {
+  margin: 0 0 8px 0;
+  color: #111827;
+  font-size: 20px;
+  text-align: center;
+}
+
+.rating-subtitle {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 24px 0;
+}
+
+.rating-selector {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.rating-btn {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rating-btn:hover:not(:disabled) {
+  border-color: #667eea;
+  background: #f3f4f6;
+  transform: scale(1.05);
+}
+
+.rating-btn.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  transform: scale(1.1);
+}
+
+.rating-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rating-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  font-size: 13px;
+  color: #6b7280;
+  padding: 0 8px;
+}
+
+.feedback-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.feedback-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.feedback-textarea:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.submit-rating-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.submit-rating-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.submit-rating-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedback-message {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.feedback-message.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 2px solid #10b981;
+}
+
+.feedback-message.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 2px solid #ef4444;
+}
+
+/* Recommendations Card */
+.recommendations-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.recommendations-card h3 {
+  margin: 0 0 16px 0;
+  color: #111827;
+  font-size: 20px;
+}
+
+.recommendations-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recommendations-list li {
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.recommendations-list li:last-child {
+  margin-bottom: 0;
+}
+
+.recommendations-list li.warning {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  color: #92400e;
+}
+
+.recommendations-list li.success {
+  background: #d1fae5;
+  border-left: 4px solid #10b981;
+  color: #065f46;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .physician-satisfaction {
+    padding: 15px;
+  }
+
+  .overall-score-card {
+    padding: 30px 20px;
+  }
+
+  .score-circle {
+    width: 150px;
+    height: 150px;
+  }
+
+  .score-number {
+    font-size: 52px;
+  }
+
+  .rating-selector {
+    gap: 6px;
+  }
+
+  .rating-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .consecutive-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .consecutive-groups li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

@@ -37,6 +37,14 @@ CREATE TABLE IF NOT EXISTS schedules (
   FOREIGN KEY(providerId) REFERENCES providers(id),
   FOREIGN KEY(siteId) REFERENCES sites(id)
 );
+
+CREATE TABLE IF NOT EXISTS physician_satisfaction (
+  username TEXT PRIMARY KEY,
+  happiness_rating INTEGER NOT NULL CHECK(happiness_rating >= 1 AND happiness_rating <= 10),
+  feedback TEXT,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(username) REFERENCES users(username)
+);
 `;
 
 db.exec(initSql);
@@ -117,6 +125,8 @@ db.serialize(() => {
     });
   });
 });
+
+
 
 // Helper functions to promisify sqlite3 operations
 export const dbGet = (sql: string, params: any[] = []): Promise<any> => {
