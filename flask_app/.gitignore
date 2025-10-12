@@ -1,0 +1,81 @@
+# ==========================
+# Python / Flask ignores
+# ==========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.pkl
+*.log
+*.sqlite3
+*.db
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter & local notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Compiled extensions
+*.so
+*.dll
+*.dylib
+
+# VSCode / IDE settings
+.vscode/
+.idea/
+
+# Flask instance & output files
+instance/
+output/
+data/
+*.xlsx
+*.csv
+
+# ==========================
+# Node / React ignores
+# ==========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# ==========================
+# OS and Misc
+# ==========================
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Backup and temp files
+*.bak
+*.swp
+*.tmp
+*.temp
+~$*
+
+# ==========================
+# PyInstaller
+# ==========================
+*.spec
+build/
+dist/
+
+# ==========================
+# PyCache in nested folders
+# ==========================
+**/__pycache__/
