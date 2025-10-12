@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Provider, Site } from '../types/schedule';
+import { Provider, Site } from './types/schedule';
 
 export type UserRole = 'admin' | 'physician' | 'hospital';
 

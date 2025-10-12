@@ -1,38 +1,114 @@
 .physician-view {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
 }
+
 .physician-view header {
   position: relative;
   margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
 }
+
+.physician-view header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 28px;
+}
+
 .physician-view .logout-btn {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: #e74c3c;
+  background: #ef4444;
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 0.5rem 1rem;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
 }
-.dow-credits {
+
+.physician-view .logout-btn:hover {
+  background: #dc2626;
+}
+
+.physician-actions {
   display: flex;
+  gap: 12px;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
-  gap: 1rem;
+}
+
+.action-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.action-btn:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: #2563eb;
+}
+
+.action-btn.success {
+  background: #10b981;
+  color: white;
+}
+
+.action-btn.success:hover {
+  background: #059669;
+}
+
+.physician-view section {
   margin-bottom: 2rem;
 }
-.dow-credit-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 180px;
+
+.physician-view section h3 {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  font-size: 20px;
+  font-weight: 600;
 }
-.date-credits {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 1rem;
+
+@media (max-width: 768px) {
+  .physician-view {
+    padding: 1rem;
+  }
+  
+  .physician-view header h2 {
+    font-size: 22px;
+    padding-right: 80px;
+  }
+  
+  .physician-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }

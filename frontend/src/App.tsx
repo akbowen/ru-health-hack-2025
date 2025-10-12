@@ -9,7 +9,7 @@ import Calendar from './components/Calendar';
 import FilterPanel from './components/FilterPanel';
 import ScheduleDetail from './components/ScheduleDetail';
 import StatsSummary from './components/StatsSummary';
-import { ScheduleData, Provider, Site } from './types/schedule';
+import { ScheduleData, Provider, Site } from './components/types/schedule';
 import { parseScheduleExcel } from './utils/scheduleParser';
 import Login from './components/Login';
 import './App.css';
@@ -250,6 +250,8 @@ function App() {
     );
   }
 
+  
+
   if (auth.role === 'hospital') {
     // Find site object for logged-in hospital user
     let site: Site | undefined = undefined;
@@ -307,6 +309,7 @@ function App() {
           >
             Calendar
           </button>
+         
           <button
             onClick={() => setAdminTab('users')}
             style={{ fontWeight: adminTab === 'users' ? 'bold' : 'normal' }}
