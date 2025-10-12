@@ -135,7 +135,7 @@ export default function AddSchedule() {
   const hasFiles = providerAvailability || providerContract || providerCredentialing || facilityVolume || facilityCoverage;
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-6">
+    <div className="w-full max-w-5xl mx-auto p-6 pt-10">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="border-b border-gray-200 px-6 py-4">
           <h2 className="text-xl font-semibold text-gray-900">Upload Schedule Files</h2>
