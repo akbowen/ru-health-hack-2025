@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import UserManagement, { UserAccount } from './components/UserManagement';
+import AddSchedule from './components/AddSchedule';
 import './components/UserManagement.css';
 import PhysicianView from './components/PhysicianView';
 import './components/PhysicianView.css';
@@ -13,6 +14,7 @@ import { ScheduleData, Provider, Site } from './types/schedule';
 import { parseScheduleExcel } from './utils/scheduleParser';
 import Login from './components/Login';
 import './App.css';
+import { add } from 'date-fns';
 
 function getInitialAuth() {
   // For demo: not logged in
@@ -24,7 +26,7 @@ export type UserRole = 'admin' | 'physician' | 'hospital';
 
 function App() {
   // Admin tab state: 'calendar' or 'users'
-  const [adminTab, setAdminTab] = useState<'calendar' | 'users'>('calendar');
+  const [adminTab, setAdminTab] = useState<'calendar' | 'users' | 'addSchedule'>('calendar');
   const [scheduleData, setScheduleData] = useState<ScheduleData>({ providers: [], sites: [], schedules: [] });
   const [selectedProvider, setSelectedProvider] = useState<Provider | undefined>();
   const [selectedSite, setSelectedSite] = useState<Site | undefined>();
@@ -40,7 +42,7 @@ function App() {
   const handleAddUser = async (user: UserAccount) => {
     try {
       const { api } = await import('./utils/api');
-      
+
       // Clean up the data before sending
       const userData = {
         username: user.username,
@@ -49,7 +51,7 @@ function App() {
         ...(user.providerId && user.providerId.trim() !== '' && { providerId: user.providerId }),
         ...(user.siteId && user.siteId.trim() !== '' && { siteId: user.siteId })
       };
-      
+
       console.log('Sending user data:', userData);
       await api.createUser(userData);
       setUsers(prev => [...prev, user]);
@@ -92,15 +94,15 @@ function App() {
     setError(undefined);
     setSuccessMessage(undefined);
     try {
-  const data = await parseScheduleExcel(file);
-  // Persist to backend so DB is the source of truth
-  await saveScheduleDataToBackend(data);
-  // Reload from backend to ensure we're showing what's actually stored
-  await loadScheduleData();
+      const data = await parseScheduleExcel(file);
+      // Persist to backend so DB is the source of truth
+      await saveScheduleDataToBackend(data);
+      // Reload from backend to ensure we're showing what's actually stored
+      await loadScheduleData();
       // Reset filters when new data is loaded
       setSelectedProvider(undefined);
       setSelectedSite(undefined);
-  setSuccessMessage(`Imported ${data.providers.length} providers, ${data.sites.length} sites, and ${data.schedules.length} schedule entries. Reloaded from database.`);
+      setSuccessMessage(`Imported ${data.providers.length} providers, ${data.sites.length} sites, and ${data.schedules.length} schedule entries. Reloaded from database.`);
     } catch (err) {
       setError('Failed to parse Excel file. Please check the file format and ensure it matches the expected structure.');
       console.error('Error parsing file:', err);
@@ -197,7 +199,7 @@ function App() {
   };
 
   // Load users when component mounts (for admin)
-    useEffect(() => {
+  useEffect(() => {
     if (auth.isAuthenticated && auth.role === 'admin') {
       loadUsers();
     }
@@ -313,6 +315,12 @@ function App() {
           >
             User Management
           </button>
+          <button
+            onClick={() => setAdminTab('addSchedule')}
+            style={{ fontWeight: adminTab === 'addSchedule' ? 'bold' : 'normal' }}
+          >
+            Add Schedule
+          </button>
         </nav>
       </header>
       <main className="App-main">
@@ -325,6 +333,8 @@ function App() {
             onEdit={handleEditUser}
             onDelete={handleDeleteUser}
           />
+        ) : adminTab === 'addSchedule' ? (
+          <AddSchedule />
         ) : (
           <>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
