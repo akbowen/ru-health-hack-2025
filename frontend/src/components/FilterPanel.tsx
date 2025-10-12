@@ -1,5 +1,5 @@
 import React from 'react';
-import { Provider, Site } from '../types/schedule';
+import { Provider, Site } from './types/schedule';
 import './FilterPanel.css';
 
 interface FilterPanelProps {

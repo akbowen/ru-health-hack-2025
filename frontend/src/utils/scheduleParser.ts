@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ScheduleData, Provider, Site, ScheduleEntry } from '../types/schedule';
+import { ScheduleData, Provider, Site, ScheduleEntry } from '../components/types/schedule';
 import { stableProviderId, stableSiteId, stableScheduleId } from './id';
 
 // Entry point: parse Excel file supporting multiple header formats including

@@ -1,20 +1,21 @@
-import { useState, useEffect } from "react";
-import UserManagement, { UserAccount } from "./components/UserManagement";
-import AddSchedule from "./components/AddSchedule";
-import "./components/UserManagement.css";
-import PhysicianView from "./components/PhysicianView";
-import "./components/PhysicianView.css";
-import HospitalView from "./components/HospitalView";
-import "./components/HospitalView.css";
-import Calendar from "./components/Calendar";
-import FilterPanel from "./components/FilterPanel";
-import ScheduleDetail from "./components/ScheduleDetail";
-import StatsSummary from "./components/StatsSummary";
-import { ScheduleData, Provider, Site } from "./types/schedule";
-import { parseScheduleExcel } from "./utils/scheduleParser";
-import Login from "./components/Login";
-import "./App.css";
-import { add } from "date-fns";
+import { useState, useEffect } from 'react';
+import UserManagement, { UserAccount } from './components/UserManagement';
+import AddSchedule from './components/AddSchedule';
+import './components/UserManagement.css';
+import PhysicianView from './components/PhysicianView';
+import './components/PhysicianView.css';
+import HospitalView from './components/HospitalView';
+import './components/HospitalView.css';
+import Calendar from './components/Calendar';
+import FilterPanel from './components/FilterPanel';
+import ScheduleDetail from './components/ScheduleDetail';
+import StatsSummary from './components/StatsSummary';
+import { ScheduleData, Provider, Site } from './components/types/schedule';
+import { parseScheduleExcel } from './utils/scheduleParser';
+import Login from './components/Login';
+import './App.css';
+import { add } from 'date-fns';
+import AdminAnalyticsUpload from './components/AdminAnalyticsUpload';
 
 function getInitialAuth() {
   // For demo: not logged in
@@ -31,8 +32,9 @@ export type UserRole = "admin" | "physician" | "hospital";
 
 function App() {
   // Admin tab state: 'calendar' or 'users'
+
   const [adminTab, setAdminTab] = useState<
-    "calendar" | "users" | "addSchedule"
+    "calendar" | "users" | "addSchedule" | "analytics"
   >("calendar");
   const [scheduleData, setScheduleData] = useState<ScheduleData>({
     providers: [],
@@ -313,15 +315,18 @@ function App() {
           </code>
         </div>
         <PhysicianView
-          provider={provider}
-          scheduleData={scheduleData}
-          onLogout={handleLogout}
-        />
+        provider={provider}
+        scheduleData={scheduleData}
+        username={auth.username}
+        onLogout={handleLogout}
+      />
       </>
     );
   }
 
-  if (auth.role === "hospital") {
+  
+
+  if (auth.role === 'hospital') {
     // Find site object for logged-in hospital user
     let site: Site | undefined = undefined;
     if (auth.siteId) {
@@ -400,6 +405,7 @@ function App() {
           >
             Calendar
           </button>
+         
           <button
             onClick={() => setAdminTab("users")}
             className={`admin-tab ${
@@ -416,6 +422,14 @@ function App() {
           >
             Add Schedule
           </button>
+          <button
+            onClick={() => setAdminTab("analytics")}
+            className={`admin-tab ${
+              adminTab === "analytics" ? "admin-tab--active" : ""
+            }`}
+          >
+            Analytics Setup
+          </button>
         </nav>
       </header>
       <main className="App-main">
@@ -430,6 +444,8 @@ function App() {
           />
         ) : adminTab === "addSchedule" ? (
           <AddSchedule />
+        ) : adminTab === "analytics" ? (
+          <AdminAnalyticsUpload />
         ) : (
           <>
             <div className="action-row">
