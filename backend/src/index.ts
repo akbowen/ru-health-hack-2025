@@ -962,6 +962,80 @@ app.delete('/api/leave-requests/:id', async (req: Request, res: Response) => {
   }
 });
 
+//adadasdasdsad
+
+// ===========================
+// FORECAST ROUTES
+// ===========================
+const FORECAST_SERVICE_URL = 'http://localhost:5051';
+
+// Get forecast for a specific state
+app.get('/api/health/forecast/:state', async (req, res) => {
+  try {
+    const { state } = req.params;
+    const weeks = req.query.weeks || 1;
+    
+    const response = await axios.get(
+      `${FORECAST_SERVICE_URL}/api/forecast/${state}`,
+      {
+        params: { weeks },
+        timeout: 30000 // 30 second timeout
+      }
+    );
+    
+    res.json(response.data);
+  } catch (error: any) {
+    console.error('Forecast error:', error.message);
+    
+    if (error.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        success: false,
+        error: 'Forecast service is not running. Please start the Python service on port 5051.'
+      });
+    }
+    
+    if (error.response) {
+      return res.status(error.response.status).json(error.response.data);
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch forecast data'
+    });
+  }
+});
+
+// Get available states
+app.get('/api/health/states', async (req, res) => {
+  try {
+    const response = await axios.get(`${FORECAST_SERVICE_URL}/api/states`);
+    res.json(response.data);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch states'
+    });
+  }
+});
+
+// Health check for forecast service
+app.get('/api/health/status', async (req, res) => {
+  try {
+    const response = await axios.get(`${FORECAST_SERVICE_URL}/health`);
+    res.json({
+      success: true,
+      forecastService: response.data
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      error: 'Forecast service is unavailable'
+    });
+  }
+});
+
+
+
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
