@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { da } from 'zod/v4/locales';
 
 // Types
 export interface ShiftCount {
@@ -82,47 +83,69 @@ export function getWeekendDays(year: number, month: number): number[] {
 }
 
 // Parse schedule Excel file and count shifts
+type Cell = string | number | null | undefined;
+type Row = Cell[];
+
 export async function analyzeShiftCounts(filePath: string): Promise<ShiftCount[]> {
-  const workbook = XLSX.readFile(filePath);
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(sheet);
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets[wb.SheetNames[0]];
 
-  const weekendDays = getWeekendDays(2025, 9);
+  // Read as a 2D array; skip top metadata rows; fill blanks with ''
+  const raw = XLSX.utils.sheet_to_json<Row>(sheet, {
+    header: 1,      // 2D array (no inferred object keys)
+    range: 6,       // start at the row where headers actually begin
+    blankrows: false,
+    defval: ""      // make empty cells be '' (not undefined)
+  }) as Row[];
 
-  const shiftCounts: Map<string, ShiftCount> = new Map();
+  if (!raw.length) return [];
 
-  const firstRow: any = data[0];
-  const shiftColumns = Object.keys(firstRow).filter(col => col !== 'Day');
+  // Row 0 are headers; coerce to strings
+  const headers: string[] = (raw[0] ?? []).map(h => String(h ?? "").trim());
+  const rows: Row[] = raw.slice(1);
 
-  data.forEach((row: any, dayIndex: number) => {
-    const dayNum = dayIndex + 1;
-    const isWeekend = weekendDays.includes(dayNum);
-
-    const dailyShifts: Map<string, Set<string>> = new Map([
-      ['MD1', new Set()],
-      ['MD2', new Set()],
-      ['PM', new Set()],
-      ['Other', new Set()]
-    ]);
-
-    shiftColumns.forEach(column => {
-      let shiftType = 'Other';
-      if (column.includes('MD1')) shiftType = 'MD1';
-      else if (column.includes('MD2')) shiftType = 'MD2';
-      else if (column.includes('PM')) shiftType = 'PM';
-
-      const doctorCell = row[column];
-      if (doctorCell && typeof doctorCell === 'string') {
-        const doctors = doctorCell.split(',').map(d => d.trim()).filter(d => d);
-        doctors.forEach(doctor => {
-          dailyShifts.get(shiftType)?.add(doctor);
-        });
-      }
+  // Precompute which columns are shift columns + their shift types
+  const shiftCols = headers
+    .map((h, i) => ({ header: h, idx: i }))
+    .filter(({ header }) => /(?:^|[\s-])(?:MD1|MD2|PM)(?:$|[\s-])/i.test(header)) // match 'AHG - MD1', '... PM', etc.
+    .map(({ header, idx }) => {
+      let t: "MD1" | "MD2" | "PM" | "Other" = "Other";
+      const H = header.toUpperCase();
+      if (H.includes("MD1")) t = "MD1";
+      else if (H.includes("MD2")) t = "MD2";
+      else if (/\bPM\b/.test(H)) t = "PM";
+      return { idx, shiftType: t as "MD1" | "MD2" | "PM" };
     });
 
-    dailyShifts.forEach((doctors, shiftType) => {
-      doctors.forEach(doctor => {
+  const weekendDays = getWeekendDays(2025, 9);
+  const shiftCounts: Map<string, ShiftCount> = new Map();
+
+  rows.forEach((row, rowIndex) => {
+    const dayNum = rowIndex + 1;
+    const isWeekend = weekendDays.includes(dayNum);
+
+    // unique doctors per shift per day
+    const seen = {
+      MD1: new Set<string>(),
+      MD2: new Set<string>(),
+      PM: new Set<string>(),
+    };
+
+    for (const { idx, shiftType } of shiftCols) {
+      const cell = row[idx];
+      // Safely coerce to string and trim
+      const doctor = typeof cell === "string" ? cell.trim() : String(cell ?? "").trim();
+
+      if (!doctor || doctor.toUpperCase() === "UNCOVERED") continue;
+
+      // If a cell had multiple comma-separated doctors (rare), split them
+      const names = doctor.split(",").map(s => s.trim()).filter(Boolean);
+      for (const name of names) seen[shiftType].add(name);
+    }
+
+    // accumulate counts
+    (Object.keys(seen) as Array<keyof typeof seen>).forEach((shiftType) => {
+      for (const doctor of seen[shiftType]) {
         if (!shiftCounts.has(doctor)) {
           shiftCounts.set(doctor, {
             doctor,
@@ -133,57 +156,99 @@ export async function analyzeShiftCounts(filePath: string): Promise<ShiftCount[]
             Total_Weekend_Shifts: 0
           });
         }
-
-        const count = shiftCounts.get(doctor)!;
-        if (isWeekend) {
-          if (shiftType === 'MD1') count.MD1_Weekend++;
-          else if (shiftType === 'MD2') count.MD2_Weekend++;
-          else if (shiftType === 'PM') count.PM_Weekend++;
-        } else {
-          if (shiftType === 'MD1') count.MD1_Weekday++;
-          else if (shiftType === 'MD2') count.MD2_Weekday++;
-          else if (shiftType === 'PM') count.PM_Weekday++;
-        }
-      });
+        const c = shiftCounts.get(doctor)!;
+        if (shiftType === "MD1") isWeekend ? c.MD1_Weekend++ : c.MD1_Weekday++;
+        if (shiftType === "MD2") isWeekend ? c.MD2_Weekend++ : c.MD2_Weekday++;
+        if (shiftType === "PM")  isWeekend ? c.PM_Weekend++  : c.PM_Weekday++;
+      }
     });
   });
 
+  // finalize totals
   const results: ShiftCount[] = [];
-  shiftCounts.forEach(count => {
-    count.MD1 = count.MD1_Weekday + count.MD1_Weekend;
-    count.MD2 = count.MD2_Weekday + count.MD2_Weekend;
-    count.PM = count.PM_Weekday + count.PM_Weekend;
-    count.Total_Weekend_Shifts = count.MD1_Weekend + count.MD2_Weekend + count.PM_Weekend;
-    count.Total_Shifts = count.MD1 + count.MD2 + count.PM;
-    results.push(count);
-  });
+  for (const c of shiftCounts.values()) {
+    c.MD1 = c.MD1_Weekday + c.MD1_Weekend;
+    c.MD2 = c.MD2_Weekday + c.MD2_Weekend;
+    c.PM  = c.PM_Weekday  + c.PM_Weekend;
+    c.Total_Weekend_Shifts = c.MD1_Weekend + c.MD2_Weekend + c.PM_Weekend;
+    c.Total_Shifts = c.MD1 + c.MD2 + c.PM;
+    results.push(c);
+  }
 
   return results.sort((a, b) => b.Total_Shifts - a.Total_Shifts);
 }
 
 // Parse facility volume file
-export function parseFacilityVolume(filePath: string): Map<string, { MD1: number | null; MD2: number | null; PM: number | null }> {
-  const workbook = XLSX.readFile(filePath);
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(sheet, { header: ['facility_name', 'Volume_MD1', 'Volume_MD2', 'Volume_PM'] });
+export function parseFacilityVolume(
+  filePath: string
+): Map<string, { MD1: number | null; MD2: number | null; PM: number | null }> {
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets[wb.SheetNames[0]];
 
-  const volumeMap = new Map();
+  // Row 3 in your screenshot is the header; use explicit headers and start at that row
+  type Row = {
+    facility_name: any;
+    "Volume MD1": any;
+    "Volume MD2": any;
+    "Volume PM": any;
+  };
 
-  data.slice(2).forEach((row: any) => {
-    const facility = row.facility_name?.trim();
-    if (!facility) return;
-
-    const parsedRow = {
-      MD1: row.Volume_MD1 === 'NC' ? null : parseFloat(row.Volume_MD1) || null,
-      MD2: row.Volume_MD2 === 'NC' ? null : parseFloat(row.Volume_MD2) || null,
-      PM: row.Volume_PM === 'NC' ? null : parseFloat(row.Volume_PM) || null
-    };
-
-    volumeMap.set(facility, parsedRow);
+  const rows = XLSX.utils.sheet_to_json<Row>(sheet, {
+    range: 2, // <-- start at Excel row 3
+    header: ["facility_name", "Volume MD1", "Volume MD2", "Volume PM"],
+    defval: "" // keep empty cells as empty strings
   });
 
+  const normText = (s: any) =>
+    String(s ?? "")
+      .replace(/\u00A0/g, " ")  // non-breaking space -> normal space
+      .replace(/\t/g, " ")
+      .trim();
+
+  const toNumOrNull = (v: any): number | null => {
+    const raw = normText(v);
+    if (!raw) return null;
+    if (/^nc$/i.test(raw)) return null;
+    // strip any stray characters and parse
+    const n = parseFloat(raw.replace(/[^\d.\-]/g, ""));
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const volumeMap = new Map<string, { MD1: number | null; MD2: number | null; PM: number | null }>();
+
+  for (const r of rows) {
+    const fac = normText(r.facility_name).toUpperCase();
+    if (!fac) continue;
+
+    const md1 = toNumOrNull((r as any)["Volume MD1"]);
+    const md2 = toNumOrNull((r as any)["Volume MD2"]);
+    const pm  = toNumOrNull((r as any)["Volume PM"]);
+
+    volumeMap.set(fac, { MD1: md1, MD2: md2, PM: pm });
+  }
+
+  // Optional: quick sanity check
+  if (volumeMap.size === 0) {
+    console.warn("[parseFacilityVolume] No rows parsed. Check sheet name/range/headers.");
+  } else {
+    const sample = Array.from(volumeMap.keys()).slice(0, 5);
+    console.log("[parseFacilityVolume] Loaded facilities:", sample, "… total:", volumeMap.size);
+  }
+
   return volumeMap;
+}
+
+
+function findScheduleHeaderRow(sheet: XLSX.Sheet): number {
+  // Scan first ~100 rows looking for a cell "Day" in column A (A1 notation)
+  for (let r = 0; r < 200; r++) {
+    const cell = sheet[XLSX.utils.encode_cell({ r, c: 0 })]; // column A = c:0
+    const v = (cell?.v ?? "").toString().replace(/\u00A0/g, " ").trim();
+    if (/^day$/i.test(v)) return r;
+  }
+  // Fallback: 0 (but we log so you can see if it failed)
+  console.warn("[schedule] Couldn't find 'Day' header; defaulting to row 0");
+  return 0;
 }
 
 // Calculate volume per doctor
@@ -194,75 +259,106 @@ export async function calculateDoctorVolumes(
   const workbook = XLSX.readFile(scheduleFilePath);
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(sheet);
+
+  const headerRow = findScheduleHeaderRow(sheet);
+
+  // Parse using the discovered header row
+  const data: any[] = XLSX.utils.sheet_to_json(sheet, {
+    range: headerRow, // this row is treated as the header
+    defval: ""        // keep blanks as ""
+  });
+
+  // Safety: if sheet_to_json turned the "Day" header into something else
+  const first = data[0] ?? {};
+  const keys = Object.keys(first);
+  const dayKey = keys.find(k => /^day$/i.test(k)) ?? "Day";
+
+  // All columns except "Day" are facility-shift columns
+  const shiftColumns = keys.filter(k => k !== dayKey);
+
+  // DEBUG so we can see what we’re parsing
+  // .log("[schedule] headerRow =", headerRow);
+  // console.log("[schedule] shiftColumns =", shiftColumns.slice(0, 8), "… total:", shiftColumns.length);
+
+  // If no shift columns, we’ll return [] — but log why
+  if (shiftColumns.length === 0) {
+    console.warn("[schedule] No shift columns found. Check header row in the XLSX.");
+  }
 
   const volumeDict = parseFacilityVolume(volumeFilePath);
   const doctorVolumes = new Map<string, VolumeData>();
 
-  const firstRow: any = data[0];
-  const shiftColumns = Object.keys(firstRow).filter(col => col !== 'Day');
+  const normText = (s: any) =>
+    String(s ?? "").replace(/\u00A0/g, " ").trim();
+  const normFacility = (s: string) => normText(s).toUpperCase();
 
   data.forEach((row: any, dayIndex: number) => {
-    const dayNum = dayIndex + 1;
-    const dailyShifts = new Map<string, { facility: string; shift_type: string }>();
+    const dayNum = Number(row[dayKey]) || (dayIndex + 1);
 
-    shiftColumns.forEach(column => {
-      const match = column.match(/(.+?)[\s-]+(MD1|MD2|PM)$/);
-      if (!match) return;
+    // De-dup (doctor, shift, day)
+    const dailySeen = new Set<string>();
 
-      const facility = match[1].trim();
-      const shiftType = match[2].trim();
+    for (const column of shiftColumns) {
+      // Matches: "AHG - MD1", "BHDCHV MD2", "ASMC- PM", etc.
+      const m = column.match(/(.+?)[\s-]+(MD1|MD2|PM)$/i);
+      if (!m) continue;
 
-      const doctorCell = row[column];
-      if (doctorCell && typeof doctorCell === 'string') {
-        const doctors = doctorCell.split(',').map(d => d.trim()).filter(d => d);
-        doctors.forEach(doctor => {
-          const key = `${doctor}-${shiftType}-${dayNum}`;
-          if (!dailyShifts.has(key)) {
-            dailyShifts.set(key, { facility, shift_type: shiftType });
-          }
-        });
-      }
-    });
+      const facility = normFacility(m[1]);
+      const shiftType = m[2].toUpperCase() as "MD1" | "MD2" | "PM";
 
-    dailyShifts.forEach((info, key) => {
-      const doctor = key.split('-')[0];
-      const shiftType = info.shift_type;
-      const facility = info.facility;
+      const cell = row[column];
+      if (!cell) continue;
 
-      if (!doctorVolumes.has(doctor)) {
-        doctorVolumes.set(doctor, {
-          doctor,
-          MD1_Volume: 0, MD2_Volume: 0, PM_Volume: 0, Total_Volume: 0,
-          NC_Shifts_MD1: 0, NC_Shifts_MD2: 0, NC_Shifts_PM: 0
-        });
-      }
+      // Split by comma OR newline
+      const doctors = String(cell)
+        .split(/[,\n]+/)
+        .map(s => normText(s))
+        .filter(Boolean);
 
-      const vol = doctorVolumes.get(doctor)!;
-      const facilityVol = volumeDict.get(facility);
+      for (const doctor of doctors) {
+        const key = `${doctor}||${shiftType}||${dayNum}`;
+        if (dailySeen.has(key)) continue;
+        dailySeen.add(key);
 
-      if (facilityVol) {
-        const volume = facilityVol[shiftType as 'MD1' | 'MD2' | 'PM'];
-        if (volume !== null) {
-          if (shiftType === 'MD1') vol.MD1_Volume += volume;
-          else if (shiftType === 'MD2') vol.MD2_Volume += volume;
-          else if (shiftType === 'PM') vol.PM_Volume += volume;
-          vol.Total_Volume += volume;
-        } else {
-          if (shiftType === 'MD1') vol.NC_Shifts_MD1++;
-          else if (shiftType === 'MD2') vol.NC_Shifts_MD2++;
-          else if (shiftType === 'PM') vol.NC_Shifts_PM++;
+        if (!doctorVolumes.has(doctor)) {
+          doctorVolumes.set(doctor, {
+            doctor,
+            MD1_Volume: 0, MD2_Volume: 0, PM_Volume: 0, Total_Volume: 0,
+            NC_Shifts_MD1: 0, NC_Shifts_MD2: 0, NC_Shifts_PM: 0
+          });
         }
-      } else {
-        if (shiftType === 'MD1') vol.NC_Shifts_MD1++;
-        else if (shiftType === 'MD2') vol.NC_Shifts_MD2++;
-        else if (shiftType === 'PM') vol.NC_Shifts_PM++;
+
+        const volRow = volumeDict.get(facility);
+        const agg = doctorVolumes.get(doctor)!;
+
+        if (volRow) {
+          const v = volRow[shiftType];
+          if (v != null) {
+            if (shiftType === "MD1") agg.MD1_Volume += v;
+            else if (shiftType === "MD2") agg.MD2_Volume += v;
+            else agg.PM_Volume += v;
+            agg.Total_Volume += v;
+          } else {
+            if (shiftType === "MD1") agg.NC_Shifts_MD1++;
+            else if (shiftType === "MD2") agg.NC_Shifts_MD2++;
+            else agg.NC_Shifts_PM++;
+          }
+        } else {
+          // Facility not found in volume map -> treat as NC
+          if (shiftType === "MD1") agg.NC_Shifts_MD1++;
+          else if (shiftType === "MD2") agg.NC_Shifts_MD2++;
+          else agg.NC_Shifts_PM++;
+        }
       }
-    });
+    }
   });
 
-  const results = Array.from(doctorVolumes.values());
-  return results.sort((a, b) => b.Total_Volume - a.Total_Volume);
+  // DEBUG: show a couple of doctors
+  const sample = Array.from(doctorVolumes.values()).slice(0, 3);
+  // console.log("[volumes] doctors parsed:", doctorVolumes.size, " sample:", sample.map(s => s.doctor));
+
+  const results = Array.from(doctorVolumes.values()).sort((a, b) => b.Total_Volume - a.Total_Volume);
+  return results;
 }
 
 // Parse contract limits

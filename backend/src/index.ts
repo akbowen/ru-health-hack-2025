@@ -375,17 +375,18 @@ app.post('/api/schedule/reset', async (_req: Request, res: Response) => {
 app.get('/api/analysis/volumes', async (req: Request, res: Response) => {
   try {
     const scheduleFilePath = path.join(process.cwd(), 'data', 'Final_Schedule-2.xlsx');
-    const volumeFilePath = path.join(process.cwd(), 'data', 'Facility volume.xlsx');
-    
+    const volumeFilePath   = path.join(process.cwd(), 'data', 'Facility volume.xlsx');
+
     if (!fs.existsSync(scheduleFilePath) || !fs.existsSync(volumeFilePath)) {
       return res.status(404).json({ error: 'Required files not found. Please upload schedule and volume files.' });
     }
-    
+
     const volumes = await calculateDoctorVolumes(scheduleFilePath, volumeFilePath);
     res.json(volumes);
   } catch (e: any) {
     console.error('Volume analysis error:', e);
-     }
+    res.status(500).json({ error: 'Failed to compute doctor volumes', details: String(e?.message ?? e) });
+  }
 });
 // ============ ADD THESE NEW ROUTES HERE ============
 
@@ -426,6 +427,8 @@ app.get('/api/analysis/compliance', async (req: Request, res: Response) => {
     const shiftCounts = await analyzeShiftCounts(scheduleFilePath);
     const contractLimits = parseContractLimits(contractFilePath);
     const compliance = await generateComplianceReport(shiftCounts, contractLimits);
+
+
     
     res.json(compliance);
   } catch (e: any) {
