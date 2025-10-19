@@ -154,7 +154,7 @@ The application is fully responsive and includes:
 - Touch-friendly navigation
 - Optimized calendar layout for mobile screens
 - Collapsible filter interface
-- Readable schedule details on small screens
+- Readable schedule details on small screens.
 
 ## 🔧 Troubleshooting
 
