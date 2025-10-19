@@ -50,53 +50,71 @@ const ScheduleChatbot: React.FC<ScheduleChatbotProps> = ({ username }) => {
   }, [messages]);
 
   const handleSend = async (question?: string) => {
-    const messageText = question || input.trim();
-    if (!messageText) return;
+  const messageText = question || input.trim();
+  if (!messageText) return;
 
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: messageText,
-      sender: 'user',
+  // Add user message
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    text: messageText,
+    sender: 'user',
+    timestamp: new Date()
+  };
+  setMessages(prev => [...prev, userMessage]);
+  setInput('');
+  setLoading(true);
+
+  try {
+    const response = await fetch('http://localhost:5051/api/chatbot/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: messageText, username })
+    });
+
+    if (!response.ok) throw new Error('Failed to get response');
+
+    // ⬇️ Put the snippet here
+    const data: { answer: string; sources?: Array<{ metadata?: any; preview?: string }> } =
+      await response.json();
+
+    // Bot answer
+    const botMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      text: data.answer,
+      sender: 'bot',
       timestamp: new Date()
     };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
+    setMessages(prev => [...prev, botMessage]);
 
-    try {
-      const response = await fetch('http://localhost:4000/api/chatbot/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: messageText, username })
-      });
+    // OPTIONAL: tiny sources bubble
+    if (data.sources?.length) {
+      const srcText = data.sources
+        .map((s, i) => `#${i + 1} ${s.metadata?.day ? `Day ${s.metadata.day}` : ''}${s.preview ? ` – ${s.preview}` : ''}`)
+        .join('\n');
 
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const data = await response.json();
-
-      // Add bot message
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: data.answer,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (err) {
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "Sorry, I couldn't process that question. Please try again.",
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 2).toString(),
+          text: `Sources:\n${srcText}`,
+          sender: 'bot',
+          timestamp: new Date()
+        }
+      ]);
     }
-  };
+  } catch (err) {
+    const errorMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      text: "Sorry, I couldn't process that question. Please try again.",
+      sender: 'bot',
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, errorMessage]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
