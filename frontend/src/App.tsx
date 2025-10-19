@@ -35,7 +35,7 @@ function App() {
   // Admin tab state: 'calendar' or 'users'
 
   const [adminTab, setAdminTab] = useState<
-    "calendar" | "users" | "addSchedule" | "analytics"
+    "calendar" | "users" | "addSchedule" | "analytics" | "analyticsgraph"
   >("calendar");
   const [scheduleData, setScheduleData] = useState<ScheduleData>({
     providers: [],
@@ -427,6 +427,13 @@ function App() {
           >
             Analytics Setup
           </button>
+          <button
+            onClick={() => setAdminTab("analyticsgraph")}
+            className={`admin-tab ${adminTab === "analyticsgraph" ? "admin-tab--active" : ""
+              }`}
+          >
+            Analytics Graph
+          </button>
         </nav>
       </header>
       <main className="App-main">
@@ -440,7 +447,7 @@ function App() {
               onEdit={handleEditUser}
               onDelete={handleDeleteUser}
             />
-            <ICUForecast />
+            {/* <ICUForecast /> */}
           </>
 
 
@@ -448,6 +455,8 @@ function App() {
           <AddSchedule />
         ) : adminTab === "analytics" ? (
           <AdminAnalyticsUpload />
+        ) : adminTab === "analyticsgraph" ? (
+          <ICUForecast />
         ) : (
           <>
             <div className="action-row">
