@@ -16,6 +16,7 @@ import Login from './components/Login';
 import './App.css';
 import { add } from 'date-fns';
 import AdminAnalyticsUpload from './components/AdminAnalyticsUpload';
+import ICUForecast from './components/ICUForecast';
 
 function getInitialAuth() {
   // For demo: not logged in
@@ -34,7 +35,7 @@ function App() {
   // Admin tab state: 'calendar' or 'users'
 
   const [adminTab, setAdminTab] = useState<
-    "calendar" | "users" | "addSchedule" | "analytics"
+    "calendar" | "users" | "addSchedule" | "analytics" | "analyticsgraph"
   >("calendar");
   const [scheduleData, setScheduleData] = useState<ScheduleData>({
     providers: [],
@@ -315,16 +316,16 @@ function App() {
           </code>
         </div>
         <PhysicianView
-        provider={provider}
-        scheduleData={scheduleData}
-        username={auth.username}
-        onLogout={handleLogout}
-      />
+          provider={provider}
+          scheduleData={scheduleData}
+          username={auth.username}
+          onLogout={handleLogout}
+        />
       </>
     );
   }
 
-  
+
 
   if (auth.role === 'hospital') {
     // Find site object for logged-in hospital user
@@ -398,54 +399,64 @@ function App() {
         <nav className="admin-tabs" style={{ marginTop: 20 }}>
           <button
             onClick={() => setAdminTab("calendar")}
-            className={`admin-tab ${
-              adminTab === "calendar" ? "admin-tab--active" : ""
-            }`}
+            className={`admin-tab ${adminTab === "calendar" ? "admin-tab--active" : ""
+              }`}
             style={{ marginRight: 0 }}
           >
             Calendar
           </button>
-         
+
           <button
             onClick={() => setAdminTab("users")}
-            className={`admin-tab ${
-              adminTab === "users" ? "admin-tab--active" : ""
-            }`}
+            className={`admin-tab ${adminTab === "users" ? "admin-tab--active" : ""
+              }`}
           >
             User Management
           </button>
           <button
             onClick={() => setAdminTab("addSchedule")}
-            className={`admin-tab ${
-              adminTab === "addSchedule" ? "admin-tab--active" : ""
-            }`}
+            className={`admin-tab ${adminTab === "addSchedule" ? "admin-tab--active" : ""
+              }`}
           >
             Add Schedule
           </button>
           <button
             onClick={() => setAdminTab("analytics")}
-            className={`admin-tab ${
-              adminTab === "analytics" ? "admin-tab--active" : ""
-            }`}
+            className={`admin-tab ${adminTab === "analytics" ? "admin-tab--active" : ""
+              }`}
           >
             Analytics Setup
+          </button>
+          <button
+            onClick={() => setAdminTab("analyticsgraph")}
+            className={`admin-tab ${adminTab === "analyticsgraph" ? "admin-tab--active" : ""
+              }`}
+          >
+            Analytics Graph
           </button>
         </nav>
       </header>
       <main className="App-main">
         {adminTab === "users" ? (
-          <UserManagement
-            users={users}
-            providers={scheduleData.providers}
-            sites={scheduleData.sites}
-            onAdd={handleAddUser}
-            onEdit={handleEditUser}
-            onDelete={handleDeleteUser}
-          />
+          <>
+            <UserManagement
+              users={users}
+              providers={scheduleData.providers}
+              sites={scheduleData.sites}
+              onAdd={handleAddUser}
+              onEdit={handleEditUser}
+              onDelete={handleDeleteUser}
+            />
+            {/* <ICUForecast /> */}
+          </>
+
+
         ) : adminTab === "addSchedule" ? (
           <AddSchedule />
         ) : adminTab === "analytics" ? (
           <AdminAnalyticsUpload />
+        ) : adminTab === "analyticsgraph" ? (
+          <ICUForecast />
         ) : (
           <>
             <div className="action-row">

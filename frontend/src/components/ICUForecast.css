@@ -1,0 +1,16 @@
+.charts-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .trend-chart-container {
+        padding: 1rem;
+    }
+
+    .chart-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
