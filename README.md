@@ -241,9 +241,9 @@ Develop an advanced admin interface with:
 | ---------------------- | ----------------------------------------------------------------- |
 | **Andrew**             | UI implementation and database integration                        |
 | **Kevin**              | Doctor Leave System, Chatbot, Analytics Engine                    |
-| **Mandar Bavdane**     | UI Integration, API Debugging, Git Management, Presentation       |
+| **Mandar & Jitesh**     | UI Integration, API Debugging, Git Management, Presentation       |
 | **Sanjavan & William** | Optimization Algorithm, Forecasting Module, CP-SAT + Greedy Logic
-| **Dev Desai**          | System integration and optimization; forecasting and scheduling algorithm routing and management.|
+| **Dev & Jitesh**          | System integration and optimization; forecasting and scheduling algorithm routing and management.|
 
 ---
 
@@ -252,6 +252,7 @@ Develop an advanced admin interface with:
 Licensed under the **MIT License** — free to use, modify, and distribute.
 
 ---
+
 
 
 
